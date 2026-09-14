@@ -59,6 +59,42 @@ export function photoUrl(photoPath: string): string {
   return `/api/photos/${photoPath}`;
 }
 
+/**
+ * Downloads an authenticated endpoint as a file.
+ *
+ * Fetched rather than linked to with <a download> so a 401 surfaces through
+ * the normal error path (and bounces to the login screen) instead of dumping
+ * raw JSON into a new tab.
+ */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const res = await fetch(`/api${path}`);
+
+  // Deliberately not routed through handle(): that parses the body as JSON,
+  // which would consume it before it can be read as a blob.
+  if (!res.ok) {
+    if (res.status === 401) onUnauthorized?.();
+    const body = await res.json().catch(() => ({}) as { error?: unknown });
+    const message =
+      typeof body.error === "string" ? body.error : `Download failed: ${res.status}`;
+    throw new ApiError(message, res.status);
+  }
+
+  const blob = await res.blob();
+
+  // Prefer the server's filename when it sent one.
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = match?.[1] ?? fallbackName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   // --- auth ---
   getSession: () => request<{ authenticated: boolean }>("/auth/session"),

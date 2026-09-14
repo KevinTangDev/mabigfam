@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import Avatar from "../components/Avatar";
+import ExportMenu from "../components/ExportMenu";
 import { Button, cardClass, inputClass } from "../components/ui";
 import type { FamilyMember } from "../types";
 
@@ -85,9 +86,12 @@ export default function TableView() {
         <span className="text-sm text-ctp-subtext0">
           {filtered.length} {filtered.length === 1 ? "member" : "members"}
         </span>
-        <Button variant="primary" onClick={() => setShowCreate(true)} className="ml-auto">
-          + Add member
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <ExportMenu />
+          <Button variant="primary" onClick={() => setShowCreate(true)}>
+            + Add member
+          </Button>
+        </div>
       </div>
 
       {error && <p className="mb-3 text-sm text-ctp-red">{error}</p>}

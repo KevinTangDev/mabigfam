@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, downloadFile } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import PhotoUploader from "../components/PhotoUploader";
 import Avatar from "../components/Avatar";
@@ -167,6 +167,16 @@ export default function MemberDetail() {
             </h2>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() =>
+                downloadFile(`/members/${member.id}/vcard`, `${member.name}.vcf`).catch((err) =>
+                  setError(err instanceof Error ? err.message : "Download failed"),
+                )
+              }
+              title="Download as a phone contact"
+            >
+              Save contact
+            </Button>
             <Button onClick={() => setShowEdit(true)}>Edit</Button>
             <Button variant="danger" onClick={handleDeleteMember}>
               Delete

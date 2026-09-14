@@ -79,6 +79,19 @@ export async function savePhoto(buffer: Buffer): Promise<string> {
   return key;
 }
 
+/** Reads a stored photo, or null if it's missing (e.g. wiped by a redeploy). */
+export async function readPhoto(key: string): Promise<{ buffer: Buffer; mime: string } | null> {
+  if (key.includes("/") || key.includes("\\") || key.includes("..")) return null;
+
+  try {
+    const buffer = await fs.readFile(path.join(config.uploadDir, key));
+    const kind = sniffImage(buffer);
+    return kind ? { buffer, mime: kind.mime } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function deletePhoto(key: string): Promise<void> {
   // Guard against a malformed key escaping the upload directory, even though
   // keys are generated above rather than accepted from callers.
