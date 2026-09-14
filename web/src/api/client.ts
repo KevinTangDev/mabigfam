@@ -1,4 +1,12 @@
-import type { FamilyMember, FamilyMemberInput, MemberRelations, ParentChildLink, TreeData } from "../types";
+import type {
+  FamilyEvent,
+  FamilyEventInput,
+  FamilyMember,
+  FamilyMemberInput,
+  MemberRelations,
+  ParentChildLink,
+  TreeData,
+} from "../types";
 
 export class ApiError extends Error {
   constructor(
@@ -141,4 +149,17 @@ export const api = {
   deleteLink: (id: string) => request<void>(`/links/${id}`, { method: "DELETE" }),
 
   getTree: () => request<TreeData>("/tree"),
+
+  // --- events / calendar ---
+  listEvents: () => request<FamilyEvent[]>("/events"),
+
+  createEvent: (data: FamilyEventInput) =>
+    request<FamilyEvent>("/events", { method: "POST", body: JSON.stringify(data) }),
+
+  updateEvent: (id: string, data: Partial<FamilyEventInput>) =>
+    request<FamilyEvent>(`/events/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  deleteEvent: (id: string) => request<void>(`/events/${id}`, { method: "DELETE" }),
+
+  getCalendarSubscription: () => request<{ path: string }>("/calendar/subscription"),
 };

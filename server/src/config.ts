@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import path from "node:path";
 
 // Load server/.env if present. Node's built-in loader (20.12+) keeps this
@@ -49,4 +50,20 @@ export const config = {
 
   /** Max accepted photo upload size, in bytes. */
   maxPhotoBytes: Number(process.env.MAX_PHOTO_BYTES ?? 8 * 1024 * 1024),
+
+  /**
+   * Secret embedded in the calendar feed URL.
+   *
+   * Google Calendar and Apple Calendar fetch a subscribed .ics feed
+   * server-to-server, with no cookies, so the feed cannot sit behind the
+   * session gate — the URL itself has to carry the credential. This is the
+   * same "private iCal address" pattern Google uses.
+   *
+   * Derived from SESSION_SECRET so there's nothing extra to configure, but
+   * settable on its own so the feed can be rotated (invalidating old
+   * subscriptions) without signing everyone out.
+   */
+  calendarFeedToken:
+    process.env.CALENDAR_FEED_TOKEN ??
+    crypto.createHmac("sha256", required("SESSION_SECRET", 32)).update("calendar-feed").digest("hex").slice(0, 32),
 };

@@ -37,3 +37,24 @@ export interface TreeData {
   members: FamilyMember[];
   links: ParentChildLink[];
 }
+
+export interface FamilyEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  allDay: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FamilyEventInput = {
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  startsAt: string;
+  endsAt?: string | null;
+  allDay?: boolean;
+};

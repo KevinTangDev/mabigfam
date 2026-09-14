@@ -12,6 +12,8 @@ import { parentChildRoutes } from "./routes/parentChild.js";
 import { treeRoutes } from "./routes/tree.js";
 import { photoRoutes } from "./routes/photos.js";
 import { exportRoutes } from "./routes/exports.js";
+import { eventRoutes } from "./routes/events.js";
+import { calendarRoutes } from "./routes/calendar.js";
 
 const app = Fastify({ logger: true });
 
@@ -47,6 +49,8 @@ await app.register(parentChildRoutes);
 await app.register(treeRoutes);
 await app.register(photoRoutes);
 await app.register(exportRoutes);
+await app.register(eventRoutes);
+await app.register(calendarRoutes);
 
 try {
   await app.listen({ port: config.port, host: "0.0.0.0" });

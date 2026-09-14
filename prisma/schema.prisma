@@ -40,3 +40,23 @@ model ParentChild {
   @@unique([parentId, childId])
   @@map("parent_child")
 }
+
+/// Family reunions and other important dates. Birthdays are not stored here —
+/// they're derived from FamilyMember.birthday when building the calendar feed.
+model FamilyEvent {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  location    String?
+  startsAt    DateTime
+  /// Null means a single-day (or single-instant) event.
+  endsAt      DateTime?
+  /// All-day events are emitted as DATE values in the .ics feed, so they
+  /// don't shift around for family in other timezones.
+  allDay      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([startsAt])
+  @@map("family_events")
+}

@@ -10,6 +10,20 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const PUBLIC_PATHS = new Set(["/api/health", "/api/auth/login", "/api/auth/session"]);
 
 /**
+ * The calendar feed can't use the session cookie (calendar clients fetch it
+ * without one), so it authenticates itself with a secret token in the path.
+ * The gate lets the prefix through and the route verifies the token.
+ */
+const TOKEN_AUTHENTICATED_PREFIX = "/api/calendar/";
+
+/** Timing-safe comparison of the feed token. */
+export function verifyCalendarToken(submitted: string): boolean {
+  const a = crypto.createHash("sha256").update(submitted).digest();
+  const b = crypto.createHash("sha256").update(config.calendarFeedToken).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
  * Compares the submitted passphrase against the configured one without
  * leaking length or match position through timing. Both sides are hashed
  * first so the compared buffers are always the same length.
@@ -59,7 +73,10 @@ export function hasValidSession(request: FastifyRequest): boolean {
  * anything under /api that isn't explicitly public requires a session.
  */
 export async function authGate(request: FastifyRequest, reply: FastifyReply) {
-  if (PUBLIC_PATHS.has(request.url.split("?")[0])) return;
+  const path = request.url.split("?")[0]!;
+
+  if (PUBLIC_PATHS.has(path)) return;
+  if (path.startsWith(TOKEN_AUTHENTICATED_PREFIX)) return; // route checks the token
   if (hasValidSession(request)) return;
 
   return reply.status(401).send({ error: "Not authenticated" });

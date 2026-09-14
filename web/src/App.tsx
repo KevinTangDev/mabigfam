@@ -2,6 +2,8 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TableView from "./pages/TableView";
 import MemberDetail from "./pages/MemberDetail";
 import TreeView from "./pages/TreeView";
+import CalendarView from "./pages/CalendarView";
+import GameView from "./pages/GameView";
 import LoginScreen from "./pages/LoginScreen";
 import { useAuth } from "./auth/AuthContext";
 import { useTheme } from "./theme/ThemeProvider";
@@ -42,6 +44,8 @@ export default function App() {
             {[
               { to: "/", label: "Table", end: true },
               { to: "/tree", label: "Tree", end: false },
+              { to: "/calendar", label: "Calendar", end: false },
+              { to: "/game", label: "Game", end: false },
             ].map((item) => (
               <NavLink
                 key={item.to}
@@ -74,6 +78,8 @@ export default function App() {
           <Route path="/members/:id" element={<MemberDetail />} />
           <Route path="/tree" element={<TreeView />} />
           <Route path="/tree/:rootId" element={<TreeView />} />
+          <Route path="/calendar" element={<CalendarView />} />
+          <Route path="/game" element={<GameView />} />
         </Routes>
       </main>
     </div>

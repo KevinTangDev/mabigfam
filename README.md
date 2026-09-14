@@ -41,11 +41,48 @@ Against the original brief, these are still to come:
 - [x] Member fields, parents/children, table + tree views
 - [x] Photos (upload, serving, avatars throughout)
 - [x] Auth (shared family passphrase)
-- [ ] CSV export
-- [ ] Contacts export for Android/iOS (vCard `.vcf`)
-- [ ] Calendar for reunions and important dates, with a subscribable `.ics`
+- [x] CSV export
+- [x] Contacts export for Android/iOS (vCard `.vcf`)
+- [x] Calendar for reunions and important dates, with a subscribable `.ics`
       feed plus per-event export / "Add to Google Calendar"
-- [ ] Trombinoscope guessing game (identify a family member from their photo)
+- [x] Trombinoscope guessing game (identify a family member from their photo)
+
+Everything from the original brief is now built.
+
+## Exports
+
+From the table view's **Export** menu:
+
+- **CSV** for spreadsheets, with parent/child names resolved. Carries a UTF-8
+  BOM so Excel on Windows doesn't mangle Chinese names.
+- **vCard (`.vcf`)** for phone contacts — one file with every card, which is
+  what iOS and Android expect for a bulk import. Photos are embedded, with a
+  no-photos variant when size matters. A single person can also be saved from
+  their own profile page.
+
+## Calendar
+
+The **Calendar** tab holds family reunions and important dates, and surfaces
+the next few birthdays (derived from member profiles — birthdays are not
+stored twice).
+
+Three ways to get dates into a calendar app:
+
+1. **Subscribe** to the feed URL shown on the page — the good option. New
+   events and birthdays then appear automatically. Google Calendar:
+   *Other calendars → From URL*. iPhone: *Settings → Calendar → Accounts →
+   Add Subscribed Calendar*.
+2. **Add to Google Calendar** per event.
+3. **Download `.ics`** per event, for Apple Calendar or Outlook.
+
+> [!IMPORTANT]
+> The feed URL contains a secret token and is **not** behind the login.
+> It can't be: Google and Apple fetch subscribed feeds server-to-server and
+> send no cookies, so the URL itself has to carry the credential (this is the
+> same "private iCal address" pattern Google uses). Treat it like a password —
+> anyone holding it can read the family's events. Rotate it by setting
+> `CALENDAR_FEED_TOKEN` in `server/.env`, which invalidates existing
+> subscriptions without signing anyone out.
 
 ## Requirements
 
@@ -93,8 +130,9 @@ npm run build
 ## Security notes
 
 - All `/api` routes are denied by default; only `/api/health`,
-  `/api/auth/login` and `/api/auth/session` are reachable without a session.
-  Photos are gated too — they're PII like everything else.
+  `/api/auth/login`, `/api/auth/session` and the token-authenticated calendar
+  feed are reachable without a session. Photos and exports are gated —
+  they're PII like everything else.
 - The session cookie is HMAC-signed (`SESSION_SECRET`), `httpOnly`,
   `sameSite=lax`, and `secure` once `NODE_ENV=production`.
 - Uploads are validated by **magic bytes**, not the browser-supplied
