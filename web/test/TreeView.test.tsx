@@ -199,4 +199,71 @@ describe("TreeView", () => {
     expect(container.textContent).toMatch(/No family members yet/i);
     expect(cards()).toHaveLength(0);
   });
+
+  /**
+   * relatives-tree lays out the family reachable from the root *through
+   * couples*. A child with only one parent recorded, whose parent has a
+   * partner, falls outside that and was silently absent from the tree — the
+   * real shape of the user's data, where one child had a single parent link.
+   */
+  it("names the members it could not place instead of dropping them silently", async () => {
+    const container = await renderTree({
+      members: [
+        member("dad", "Hung VENG"),
+        member("onlyOneParent", "Kevin TANG"),
+        member("mum", "Mou TANG"),
+        member("shared", "Thierry TANG"),
+      ],
+      links: [
+        { id: "l1", parentId: "mum", childId: "shared", createdAt: "" },
+        { id: "l2", parentId: "dad", childId: "onlyOneParent", createdAt: "" },
+        { id: "l3", parentId: "dad", childId: "shared", createdAt: "" },
+      ],
+      partnerships: [],
+    });
+
+    expect(container.textContent).toMatch(/isn't shown here|aren't shown here/i);
+    expect(container.textContent).toContain("Kevin TANG");
+  });
+
+  it("says nothing about missing members when everyone is placed", async () => {
+    const container = await renderTree(coupleWithTwoKids);
+    expect(container.textContent).not.toMatch(/shown here/i);
+  });
+
+  it("also reports members with no relationships at all", async () => {
+    const container = await renderTree({
+      members: [member("a", "Linked One"), member("b", "Linked Two"), member("z", "Unconnected")],
+      links: [{ id: "l1", parentId: "a", childId: "b", createdAt: "" }],
+      partnerships: [],
+    });
+
+    expect(container.textContent).toMatch(/shown here/i);
+    expect(container.textContent).toContain("Unconnected");
+  });
+});
+
+describe("TreeView when the layout library fails", () => {
+  it("explains the failure instead of blanking the page", async () => {
+    // No real family shape is known to throw, so the failure is injected: the
+    // point is that a throw is reported, not that it crashes the app.
+    vi.doMock("relatives-tree", () => ({
+      default: () => {
+        throw new Error("can't access property \"pos\", nextFamily.children[index] is undefined");
+      },
+    }));
+    vi.resetModules();
+
+    try {
+      const container = await renderTree(coupleWithTwoKids);
+
+      expect(container.textContent).toMatch(/can't be laid out/i);
+      expect(container.textContent).toContain("nextFamily.children");
+      // The rest of the page survives: the root picker is still usable.
+      expect(container.querySelector("select")).toBeTruthy();
+    } finally {
+      vi.doUnmock("relatives-tree");
+      vi.resetModules();
+    }
+  });
 });
