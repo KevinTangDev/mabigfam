@@ -1,5 +1,5 @@
 import type { Gender, Node, Relation, RelType } from "relatives-tree/lib/types";
-import type { ParentChildLink } from "../types";
+import type { Partnership, ParentChildLink } from "../types";
 
 // relatives-tree declares Gender/RelType as *ambient* const enums, which
 // can't be referenced as values under Vite/esbuild's isolatedModules — so we
@@ -7,44 +7,59 @@ import type { ParentChildLink } from "../types";
 // typed via `as` instead of importing the enum objects themselves.
 const GENDER_MALE = "male" as Gender;
 const REL_BLOOD = "blood" as RelType;
+const REL_HALF = "half" as RelType;
 const REL_MARRIED = "married" as RelType;
+const REL_DIVORCED = "divorced" as RelType;
+
+function relTypeForStatus(status: string): RelType {
+  return status === "divorced" ? REL_DIVORCED : REL_MARRIED;
+}
 
 /**
  * relatives-tree needs a full graph of parents/children/siblings/spouses per
- * node (see node_modules/relatives-tree/lib/types.d.ts). Our schema only
- * stores ParentChild rows, so we derive siblings (members who share a
- * parent) and spouses (members who share a child) from that data here.
+ * node (see node_modules/relatives-tree/lib/types.d.ts).
+ *
+ * Parents and children come straight from ParentChild rows. Spouses prefer
+ * explicit Partnership records; where a couple has no record but shares a
+ * child, they're still inferred as partners so older data keeps rendering as
+ * a couple. Siblings are always derived from shared parents.
  *
  * We don't track gender, so every node is given a fixed placeholder gender —
  * it only affects relatives-tree's own styling, which we override with a
  * custom renderNode anyway.
  */
-export function buildRelativesTreeNodes(memberIds: string[], links: ParentChildLink[]): Node[] {
+export function buildRelativesTreeNodes(
+  memberIds: string[],
+  links: ParentChildLink[],
+  partnerships: Partnership[] = [],
+): Node[] {
   const parentsOf = new Map<string, Set<string>>();
   const childrenOf = new Map<string, Set<string>>();
+  const siblingsOf = new Map<string, Set<string>>();
+  /** partner id -> relationship type, so divorced pairs render differently. */
+  const partnersOf = new Map<string, Map<string, RelType>>();
+
+  const known = new Set(memberIds);
 
   for (const id of memberIds) {
     parentsOf.set(id, new Set());
     childrenOf.set(id, new Set());
+    siblingsOf.set(id, new Set());
+    partnersOf.set(id, new Map());
   }
 
   for (const link of links) {
-    if (!parentsOf.has(link.childId) || !childrenOf.has(link.parentId)) continue; // skip dangling links
+    if (!known.has(link.childId) || !known.has(link.parentId)) continue; // dangling
     parentsOf.get(link.childId)!.add(link.parentId);
     childrenOf.get(link.parentId)!.add(link.childId);
   }
 
-  const siblingsOf = new Map<string, Set<string>>();
-  const spousesOf = new Map<string, Set<string>>();
-  for (const id of memberIds) {
-    siblingsOf.set(id, new Set());
-    spousesOf.set(id, new Set());
-  }
-
-  // Siblings: share at least one parent.
+  // Siblings: share at least one parent. Sharing *every* parent counts as a
+  // full sibling, otherwise it's a half sibling.
   for (const id of memberIds) {
     const myParents = parentsOf.get(id)!;
     if (myParents.size === 0) continue;
+
     for (const parentId of myParents) {
       for (const siblingId of childrenOf.get(parentId) ?? []) {
         if (siblingId !== id) siblingsOf.get(id)!.add(siblingId);
@@ -52,24 +67,46 @@ export function buildRelativesTreeNodes(memberIds: string[], links: ParentChildL
     }
   }
 
-  // Spouses: co-parent at least one child together.
+  // Explicit partnerships win.
+  for (const partnership of partnerships) {
+    if (!known.has(partnership.aId) || !known.has(partnership.bId)) continue;
+    const type = relTypeForStatus(partnership.status);
+    partnersOf.get(partnership.aId)!.set(partnership.bId, type);
+    partnersOf.get(partnership.bId)!.set(partnership.aId, type);
+  }
+
+  // Fallback: co-parents of the same child, unless already recorded above.
   for (const id of memberIds) {
     for (const childId of childrenOf.get(id) ?? []) {
       for (const coParentId of parentsOf.get(childId) ?? []) {
-        if (coParentId !== id) spousesOf.get(id)!.add(coParentId);
+        if (coParentId === id) continue;
+        if (!partnersOf.get(id)!.has(coParentId)) {
+          partnersOf.get(id)!.set(coParentId, REL_MARRIED);
+        }
       }
     }
   }
 
-  const toRelations = (ids: Set<string>): Relation[] =>
+  const siblingRelations = (id: string): Relation[] => {
+    const myParents = parentsOf.get(id)!;
+    return [...siblingsOf.get(id)!].map((siblingId) => {
+      const theirParents = parentsOf.get(siblingId)!;
+      const shareAll =
+        myParents.size === theirParents.size &&
+        [...myParents].every((p) => theirParents.has(p));
+      return { id: siblingId, type: shareAll ? REL_BLOOD : REL_HALF };
+    });
+  };
+
+  const bloodRelations = (ids: Set<string>): Relation[] =>
     [...ids].map((relId) => ({ id: relId, type: REL_BLOOD }));
 
   return memberIds.map((id) => ({
     id,
     gender: GENDER_MALE,
-    parents: toRelations(parentsOf.get(id)!),
-    children: toRelations(childrenOf.get(id)!),
-    siblings: toRelations(siblingsOf.get(id)!),
-    spouses: [...spousesOf.get(id)!].map((relId) => ({ id: relId, type: REL_MARRIED })),
+    parents: bloodRelations(parentsOf.get(id)!),
+    children: bloodRelations(childrenOf.get(id)!),
+    siblings: siblingRelations(id),
+    spouses: [...partnersOf.get(id)!].map(([relId, type]) => ({ id: relId, type })),
   }));
 }

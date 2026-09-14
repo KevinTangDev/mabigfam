@@ -5,6 +5,8 @@ import type {
   FamilyMemberInput,
   MemberRelations,
   ParentChildLink,
+  Partnership,
+  PartnershipStatus,
   TreeData,
 } from "../types";
 
@@ -49,10 +51,13 @@ async function handle<T>(res: Response, isLoginRequest: boolean): Promise<T> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
+  // Only declare a JSON content type when we're actually sending JSON.
+  // Fastify rejects a bodyless request that claims application/json with
+  // FST_ERR_CTP_EMPTY_JSON_BODY (400), which silently broke every DELETE
+  // and the bodyless logout POST.
+  const headers = init?.body ? { "Content-Type": "application/json" } : undefined;
+
+  const res = await fetch(`/api${path}`, { ...init, headers });
   return handle<T>(res, path.startsWith("/auth/login"));
 }
 
@@ -149,6 +154,24 @@ export const api = {
   deleteLink: (id: string) => request<void>(`/links/${id}`, { method: "DELETE" }),
 
   getTree: () => request<TreeData>("/tree"),
+
+  // --- partnerships ---
+  listPartnerships: () => request<Partnership[]>("/partnerships"),
+
+  createPartnership: (memberIds: [string, string], status: PartnershipStatus) =>
+    request<Partnership>("/partnerships", {
+      method: "POST",
+      body: JSON.stringify({ memberIds, status }),
+    }),
+
+  updatePartnership: (id: string, data: { status?: PartnershipStatus; since?: string | null }) =>
+    request<Partnership>(`/partnerships/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deletePartnership: (id: string) =>
+    request<void>(`/partnerships/${id}`, { method: "DELETE" }),
 
   // --- events / calendar ---
   listEvents: () => request<FamilyEvent[]>("/events"),

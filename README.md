@@ -9,8 +9,8 @@ handle the multi-parent layout case a plain recursive tree struggles with).
 
 ## Structure
 
-- [`prisma/schema.prisma`](prisma/schema.prisma) — `FamilyMember` and
-  `ParentChild` models, SQLite datasource.
+- [`prisma/schema.prisma`](prisma/schema.prisma) — `FamilyMember`,
+  `ParentChild`, `Partnership` and `FamilyEvent` models, SQLite datasource.
 - [`server/`](server) — Fastify API. Shared-passphrase auth, CRUD for
   members, photo upload/serving, parent/child link management (with cycle
   prevention), and routes that resolve a member's (or the whole tree's)
@@ -127,6 +127,29 @@ separately with `npm run dev:server` / `npm run dev:web`.
 npm run build
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
+Runs both suites (Vitest). `npm run test:watch` inside `server/` or `web/`
+watches.
+
+- **`server/test`** — unit tests for the CSV, vCard and iCalendar writers
+  (escaping, line folding, all-day DTEND semantics), plus integration tests
+  that drive the real routes through `app.inject()`, covering the auth gate,
+  cycle prevention, partnership rules, and cascade behaviour.
+- **`web/test`** — unit tests for the relatives-tree graph builder (siblings,
+  half-siblings, explicit vs inferred partners) and the calendar date helpers
+  (end-exclusive ranges, birthday rollover, leap days).
+
+The integration tests copy `schema.prisma` to a temp directory with the
+datasource URL rewritten and migrate a throwaway database, so they can never
+touch the real family data. That indirection is needed because the schema
+hardcodes its URL rather than reading `env("DATABASE_URL")`, which means the
+Prisma CLI would otherwise ignore an override and migrate the real file.
+
 ## Security notes
 
 - All `/api` routes are denied by default; only `/api/health`,
@@ -154,12 +177,14 @@ npm run build
   needs a native image library. Uploading from iOS normally transcodes to
   JPEG automatically; a `.heic` file from a desktop gets a message explaining
   how to convert it.
-- `FamilyMember` has no `gender` or explicit spouse relation in the schema.
-  The tree view derives siblings (share a parent) and spouses (share a
-  child) from `ParentChild` data alone — see
+- `FamilyMember` has no `gender` field, which relatives-tree uses only for
+  its own styling — irrelevant here since the node cards are custom.
+- Partnerships are explicit (`Partnership`, with married/partner/divorced),
+  but two people who share a child and have no recorded partnership are
+  still *inferred* as a couple so older data keeps rendering sensibly.
+  Siblings remain derived from shared parents, with half-siblings
+  distinguished from full ones — see
   [`web/src/lib/buildRelativesTree.ts`](web/src/lib/buildRelativesTree.ts).
-  Adding real `gender`/spouse fields later would make that inference exact
-  instead of heuristic.
 - Prisma is pinned to the 6.x line: Prisma 7 removed the classic
   `datasource { url = "..." }` form used in `schema.prisma` in favor of a
   `prisma.config.ts` + driver-adapter setup, which would mean rewriting the

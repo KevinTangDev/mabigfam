@@ -24,6 +24,11 @@ model FamilyMember {
   // Rows where this member is the child
   parentLinks ParentChild[] @relation("ChildRelation")
 
+  // Partnerships are symmetric but stored once, so a member can appear on
+  // either side; both relations must be followed to find all their partners.
+  partnershipsA Partnership[] @relation("PartnerA")
+  partnershipsB Partnership[] @relation("PartnerB")
+
   @@map("family_members")
 }
 
@@ -39,6 +44,34 @@ model ParentChild {
 
   @@unique([parentId, childId])
   @@map("parent_child")
+}
+
+/// A marriage or partnership between two members.
+///
+/// The relationship is symmetric, so it's stored as a single row rather than
+/// two mirrored ones. `aId` always holds the lexicographically smaller id
+/// (enforced in the route layer), which is what makes the unique constraint
+/// below able to reject a duplicate added "the other way round".
+model Partnership {
+  id  String @id @default(uuid())
+  aId String
+  bId String
+
+  /// "married" | "partner" | "divorced" — SQLite has no enum support in
+  /// Prisma, so the allowed values are validated in the route schema.
+  status String @default("married")
+
+  /// Optional, so a wedding anniversary can be shown on the calendar.
+  since DateTime?
+
+  a FamilyMember @relation("PartnerA", fields: [aId], references: [id], onDelete: Cascade)
+  b FamilyMember @relation("PartnerB", fields: [bId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([aId, bId])
+  @@map("partnerships")
 }
 
 /// Family reunions and other important dates. Birthdays are not stored here —

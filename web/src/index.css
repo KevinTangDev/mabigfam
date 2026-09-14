@@ -122,10 +122,18 @@
 @layer components {
   /*
    * react-family-tree draws its connector lines as <i> elements with a
-   * hardcoded `background: #999` inline style. Inline styles outrank normal
-   * CSS, so !important is the only way to bring them into the palette.
+   * hardcoded `background: #999` inline style and a 1px minimum thickness.
+   * Inline styles outrank normal CSS, so !important is the only way to bring
+   * them into the palette and thicken them into readable ancestry lines.
+   *
+   * The lines are only visible because TreeView renders each card smaller
+   * than its grid cell — see the gutter constants there.
    */
   .tree-canvas > i {
-    background: var(--ctp-surface2) !important;
+    background: var(--ctp-overlay0) !important;
+    /* Grows the 1px line evenly in both axes, so it reads as a drawn line
+       whether the connector is horizontal or vertical, without nudging
+       anything out of position. */
+    box-shadow: 0 0 0 0.5px var(--ctp-overlay0);
   }
 }

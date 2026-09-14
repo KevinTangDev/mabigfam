@@ -8,8 +8,21 @@ import FamilyNodeCard from "../components/FamilyNodeCard";
 import { cardClass, inputClass } from "../components/ui";
 import type { FamilyMember, TreeData } from "../types";
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 90;
+/**
+ * relatives-tree positions nodes on a grid of NODE_WIDTH x NODE_HEIGHT cells
+ * and draws its connector lines between cell centres. Rendering a card at the
+ * full cell size therefore covers those lines and leaves cards touching.
+ *
+ * So the cell is deliberately larger than the card: the difference is the
+ * gutter, and the connectors show through it as the ancestry lines.
+ */
+const CELL_WIDTH = 220;
+const CELL_HEIGHT = 140;
+const CARD_GUTTER_X = 26;
+const CARD_GUTTER_Y = 34;
+
+const CARD_WIDTH = CELL_WIDTH - CARD_GUTTER_X * 2;
+const CARD_HEIGHT = CELL_HEIGHT - CARD_GUTTER_Y * 2;
 
 export default function TreeView() {
   const { rootId: rootIdParam } = useParams<{ rootId?: string }>();
@@ -43,6 +56,7 @@ export default function TreeView() {
     return buildRelativesTreeNodes(
       data.members.map((m) => m.id),
       data.links,
+      data.partnerships,
     );
   }, [data]);
 
@@ -84,8 +98,8 @@ export default function TreeView() {
         <ReactFamilyTree
           nodes={nodes}
           rootId={rootId}
-          width={NODE_WIDTH}
-          height={NODE_HEIGHT}
+          width={CELL_WIDTH}
+          height={CELL_HEIGHT}
           className="tree-canvas"
           renderNode={(node: ExtNode) => (
             <FamilyNodeCard
@@ -95,9 +109,12 @@ export default function TreeView() {
               isRoot={node.id === rootId}
               onSelect={(id) => navigate(`/members/${id}`)}
               style={{
-                width: NODE_WIDTH,
-                height: NODE_HEIGHT,
-                transform: `translate(${node.left * (NODE_WIDTH / 2)}px, ${node.top * (NODE_HEIGHT / 2)}px)`,
+                width: CARD_WIDTH,
+                height: CARD_HEIGHT,
+                // Offset by the gutter so the card sits inset within its cell.
+                transform: `translate(${node.left * (CELL_WIDTH / 2) + CARD_GUTTER_X}px, ${
+                  node.top * (CELL_HEIGHT / 2) + CARD_GUTTER_Y
+                }px)`,
               }}
             />
           )}
