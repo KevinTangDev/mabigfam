@@ -60,3 +60,15 @@ npm run build
   `datasource { url = "..." }` form used in `schema.prisma` in favor of a
   `prisma.config.ts` + driver-adapter setup, which would mean rewriting the
   schema this project shipped with.
+- `npm audit` reports 2 accepted-risk findings that only a breaking major
+  upgrade would clear, both low-impact for this app: a stack-exhaustion DoS
+  in `deepmerge-ts`, pulled in by the Prisma **CLI's** own config loader
+  (not a runtime dependency — fixed only by Prisma 8, see above), and two
+  moderate `react-router` advisories fixed only in React Router v7 (a
+  breaking API migration) — one is an SSR hydration issue that doesn't apply
+  here (this app is a client-only SPA), the other an open-redirect in
+  `<Link>`/`useNavigate` that requires navigating to attacker-controlled
+  paths, which this app never does. Don't run `npm audit fix --force`
+  reflexively: in this npm-workspaces layout it has previously misattributed
+  hoisted deps into the wrong workspace's `package.json` (e.g. adding
+  `fastify` to `web` and `vite`/`react-router-dom` to `server`).
