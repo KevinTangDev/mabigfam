@@ -5,6 +5,7 @@ import type { ExtNode } from "relatives-tree/lib/types";
 import { api } from "../api/client";
 import { buildRelativesTreeNodes } from "../lib/buildRelativesTree";
 import FamilyNodeCard from "../components/FamilyNodeCard";
+import { cardClass, inputClass } from "../components/ui";
 import type { FamilyMember, TreeData } from "../types";
 
 const NODE_WIDTH = 180;
@@ -20,10 +21,8 @@ export default function TreeView() {
     api.getTree().then((tree) => {
       setData(tree);
       if (!rootIdParam && tree.members.length > 0) {
-        // Default to a member with no recorded parents (a "founder"), else the first member.
-        const founder = tree.members.find(
-          (m) => !tree.links.some((l) => l.childId === m.id),
-        );
+        // Default to a member with no recorded parents (a "founder"), else the first.
+        const founder = tree.members.find((m) => !tree.links.some((l) => l.childId === m.id));
         setRootId((founder ?? tree.members[0]).id);
       }
     });
@@ -47,22 +46,30 @@ export default function TreeView() {
     );
   }, [data]);
 
-  if (!data) return <p>Loading...</p>;
+  if (!data) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
 
   if (data.members.length === 0) {
-    return <p>No family members yet. Add some in the Table view first.</p>;
+    return (
+      <div className={`${cardClass} p-10 text-center text-sm text-ctp-subtext0`}>
+        No family members yet. Add some in the Table view first.
+      </div>
+    );
   }
 
   if (!rootId || !nodes.some((n) => n.id === rootId)) {
-    return <p>Loading...</p>;
+    return <p className="text-sm text-ctp-subtext0">Loading...</p>;
   }
 
   return (
     <div>
-      <div className="toolbar">
-        <label>
-          Root:{" "}
-          <select value={rootId} onChange={(e) => navigate(`/tree/${e.target.value}`)}>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-ctp-subtext0">
+          Viewing from
+          <select
+            value={rootId}
+            onChange={(e) => navigate(`/tree/${e.target.value}`)}
+            className={`${inputClass} max-w-xs`}
+          >
             {data.members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -70,9 +77,10 @@ export default function TreeView() {
             ))}
           </select>
         </label>
+        <span className="text-xs text-ctp-overlay1">Click anyone to open their profile</span>
       </div>
 
-      <div className="tree-scroll">
+      <div className={`${cardClass} max-h-[75vh] overflow-auto p-6`}>
         <ReactFamilyTree
           nodes={nodes}
           rootId={rootId}

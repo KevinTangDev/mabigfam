@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import PhotoUploader from "../components/PhotoUploader";
 import Avatar from "../components/Avatar";
+import { Button, cardClass, inputClass } from "../components/ui";
 import type { FamilyMember, MemberRelations, ParentChildLink } from "../types";
 
 export default function MemberDetail() {
@@ -34,7 +35,7 @@ export default function MemberDetail() {
     load();
   }, [id]);
 
-  if (!member) return <p>Loading...</p>;
+  if (!member) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
 
   const pickableParents = allMembers.filter(
     (m) => m.id !== member.id && !member.parents.some((p) => p.id === m.id),
@@ -47,27 +48,14 @@ export default function MemberDetail() {
     return links.find((l) => l.parentId === parentId && l.childId === childId)?.id;
   }
 
-  async function addParent() {
-    if (!newParentId || !id) return;
+  async function addLink(parentId: string, childId: string, reset: () => void) {
     setError(null);
     try {
-      await api.createLink(newParentId, id);
-      setNewParentId("");
+      await api.createLink(parentId, childId);
+      reset();
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add parent");
-    }
-  }
-
-  async function addChild() {
-    if (!newChildId || !id) return;
-    setError(null);
-    try {
-      await api.createLink(id, newChildId);
-      setNewChildId("");
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add child");
+      setError(err instanceof Error ? err.message : "Could not add link");
     }
   }
 
@@ -85,99 +73,150 @@ export default function MemberDetail() {
     navigate("/");
   }
 
-  return (
-    <div className="detail">
-      <button className="link-button" onClick={() => navigate(-1)}>
-        ← Back
-      </button>
+  const details: { label: string; value: string | null }[] = [
+    { label: "Birthday", value: member.birthday ? member.birthday.slice(0, 10) : null },
+    { label: "Phone", value: member.phone },
+    { label: "Address", value: member.address },
+    { label: "Note", value: member.note },
+  ];
 
-      <div className="detail-header">
-        <h2>
-          {member.name} {member.nameZh && <span className="muted">({member.nameZh})</span>}
-        </h2>
-        <div>
-          <button onClick={() => setShowEdit(true)}>Edit</button>
-          <button className="danger" onClick={handleDeleteMember}>
-            Delete
-          </button>
+  function RelationSection({
+    heading,
+    people,
+    pickable,
+    placeholder,
+    value,
+    onValueChange,
+    onAdd,
+    onRemove,
+  }: {
+    heading: string;
+    people: FamilyMember[];
+    pickable: FamilyMember[];
+    placeholder: string;
+    value: string;
+    onValueChange: (v: string) => void;
+    onAdd: () => void;
+    onRemove: (personId: string) => void;
+  }) {
+    return (
+      <section className={`${cardClass} p-4`}>
+        <h3 className="text-sm font-semibold text-ctp-text">{heading}</h3>
+
+        <ul className="mt-2 divide-y divide-ctp-surface0">
+          {people.map((p) => (
+            <li key={p.id} className="group flex items-center gap-3 py-2">
+              <Avatar member={p} size={30} />
+              <button
+                onClick={() => navigate(`/members/${p.id}`)}
+                className="cursor-pointer text-sm font-medium text-ctp-blue hover:underline"
+              >
+                {p.name}
+              </button>
+              <Button
+                variant="danger"
+                onClick={() => onRemove(p.id)}
+                className="ml-auto opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+              >
+                Remove
+              </Button>
+            </li>
+          ))}
+          {people.length === 0 && (
+            <li className="py-2 text-sm text-ctp-subtext0">None linked yet</li>
+          )}
+        </ul>
+
+        <div className="mt-3 flex gap-2">
+          <select
+            value={value}
+            onChange={(e) => onValueChange(e.target.value)}
+            className={`${inputClass} flex-1`}
+          >
+            <option value="">{placeholder}</option>
+            {pickable.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <Button onClick={onAdd} disabled={!value}>
+            Add
+          </Button>
         </div>
+      </section>
+    );
+  }
+
+  return (
+    <div>
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-3 -ml-3">
+        ← Back
+      </Button>
+
+      <div className={`${cardClass} p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-ctp-text">
+              {member.name}
+              {member.nameZh && (
+                <span className="ml-2 text-base font-normal text-ctp-subtext0">
+                  {member.nameZh}
+                </span>
+              )}
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowEdit(true)}>Edit</Button>
+            <Button variant="danger" onClick={handleDeleteMember}>
+              Delete
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <PhotoUploader
+            member={member}
+            onChange={(updated) => setMember({ ...member, ...updated })}
+          />
+        </div>
+
+        <dl className="mt-6 grid grid-cols-[minmax(5rem,7rem)_1fr] gap-y-2 text-sm">
+          {details.map((d) => (
+            <div key={d.label} className="contents">
+              <dt className="text-ctp-subtext0">{d.label}</dt>
+              <dd className={d.value ? "text-ctp-text" : "text-ctp-overlay0"}>
+                {d.value ?? "—"}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
-      <PhotoUploader
-        member={member}
-        onChange={(updated) => setMember({ ...member, ...updated })}
-      />
+      {error && <p className="mt-3 text-sm text-ctp-red">{error}</p>}
 
-      <dl className="detail-fields">
-        <dt>Birthday</dt>
-        <dd>{member.birthday ? member.birthday.slice(0, 10) : "—"}</dd>
-        <dt>Phone</dt>
-        <dd>{member.phone ?? "—"}</dd>
-        <dt>Address</dt>
-        <dd>{member.address ?? "—"}</dd>
-        <dt>Note</dt>
-        <dd>{member.note ?? "—"}</dd>
-      </dl>
-
-      {error && <p className="form-error">{error}</p>}
-
-      <section>
-        <h3>Parents</h3>
-        <ul className="relation-list">
-          {member.parents.map((p) => (
-            <li key={p.id}>
-              <Avatar member={p} size={28} />
-              <a onClick={() => navigate(`/members/${p.id}`)}>{p.name}</a>
-              <button className="link-button danger" onClick={() => removeLink(p.id, member.id)}>
-                Remove
-              </button>
-            </li>
-          ))}
-          {member.parents.length === 0 && <li className="muted">No parents linked</li>}
-        </ul>
-        <div className="add-relation">
-          <select value={newParentId} onChange={(e) => setNewParentId(e.target.value)}>
-            <option value="">Add existing member as parent...</option>
-            {pickableParents.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <button onClick={addParent} disabled={!newParentId}>
-            Add
-          </button>
-        </div>
-      </section>
-
-      <section>
-        <h3>Children</h3>
-        <ul className="relation-list">
-          {member.children.map((c) => (
-            <li key={c.id}>
-              <Avatar member={c} size={28} />
-              <a onClick={() => navigate(`/members/${c.id}`)}>{c.name}</a>
-              <button className="link-button danger" onClick={() => removeLink(member.id, c.id)}>
-                Remove
-              </button>
-            </li>
-          ))}
-          {member.children.length === 0 && <li className="muted">No children linked</li>}
-        </ul>
-        <div className="add-relation">
-          <select value={newChildId} onChange={(e) => setNewChildId(e.target.value)}>
-            <option value="">Add existing member as child...</option>
-            {pickableChildren.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <button onClick={addChild} disabled={!newChildId}>
-            Add
-          </button>
-        </div>
-      </section>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <RelationSection
+          heading="Parents"
+          people={member.parents}
+          pickable={pickableParents}
+          placeholder="Add someone as parent..."
+          value={newParentId}
+          onValueChange={setNewParentId}
+          onAdd={() => addLink(newParentId, member.id, () => setNewParentId(""))}
+          onRemove={(personId) => removeLink(personId, member.id)}
+        />
+        <RelationSection
+          heading="Children"
+          people={member.children}
+          pickable={pickableChildren}
+          placeholder="Add someone as child..."
+          value={newChildId}
+          onValueChange={setNewChildId}
+          onAdd={() => addLink(member.id, newChildId, () => setNewChildId(""))}
+          onRemove={(personId) => removeLink(member.id, personId)}
+        />
+      </div>
 
       {showEdit && (
         <MemberFormModal

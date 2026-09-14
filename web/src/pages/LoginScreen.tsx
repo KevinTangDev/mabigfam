@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
+import { Button, cardClass, inputClass } from "../components/ui";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -21,10 +22,10 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="login-screen">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <h1>MaBigFam</h1>
-        <p className="muted">Enter the family password to continue.</p>
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <form onSubmit={handleSubmit} className={`${cardClass} w-full max-w-sm p-7 shadow-sm`}>
+        <h1 className="text-2xl font-semibold tracking-tight text-ctp-mauve">MaBigFam</h1>
+        <p className="mt-1 text-sm text-ctp-subtext0">Enter the family password to continue.</p>
 
         <input
           type="password"
@@ -33,13 +34,14 @@ export default function LoginScreen() {
           placeholder="Family password"
           autoFocus
           autoComplete="current-password"
+          className={`${inputClass} mt-5`}
         />
 
-        {error && <p className="form-error">{error}</p>}
+        {error && <p className="mt-3 text-sm text-ctp-red">{error}</p>}
 
-        <button type="submit" disabled={busy || !password}>
+        <Button type="submit" variant="primary" disabled={busy || !password} className="mt-4 w-full">
           {busy ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
     </div>
   );

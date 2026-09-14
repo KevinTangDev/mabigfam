@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import Avatar from "./Avatar";
+import { Button } from "./ui";
 import type { FamilyMember } from "../types";
 
 interface Props {
@@ -41,10 +42,10 @@ export default function PhotoUploader({ member, onChange }: Props) {
   }
 
   return (
-    <div className="photo-uploader">
-      <Avatar member={member} size={96} />
+    <div className="flex items-center gap-4">
+      <Avatar member={member} size={88} />
 
-      <div className="photo-uploader__actions">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           ref={inputRef}
           type="file"
@@ -52,15 +53,15 @@ export default function PhotoUploader({ member, onChange }: Props) {
           hidden
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
+        <Button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
           {busy ? "Working..." : member.photoPath ? "Replace photo" : "Add photo"}
-        </button>
+        </Button>
         {member.photoPath && (
-          <button type="button" className="danger" onClick={handleRemove} disabled={busy}>
+          <Button type="button" variant="danger" onClick={handleRemove} disabled={busy}>
             Remove
-          </button>
+          </Button>
         )}
-        {error && <p className="form-error">{error}</p>}
+        {error && <p className="basis-full text-sm text-ctp-red">{error}</p>}
       </div>
     </div>
   );

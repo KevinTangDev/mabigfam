@@ -1,405 +1,131 @@
+@import "tailwindcss";
+
+/*
+ * Catppuccin (https://catppuccin.com) — Latte for light, Mocha for dark.
+ * Hex values taken from the official @catppuccin/palette package.
+ *
+ * Components only ever use the semantic `ctp-*` utilities (bg-ctp-base,
+ * text-ctp-subtext0, border-ctp-surface1, ...). The variables below are what
+ * actually swap between flavors, so switching themes needs no `dark:`
+ * variants sprinkled through the markup.
+ */
+
+/* Latte (light) */
 :root {
+  --ctp-rosewater: #dc8a78;
+  --ctp-flamingo: #dd7878;
+  --ctp-pink: #ea76cb;
+  --ctp-mauve: #8839ef;
+  --ctp-red: #d20f39;
+  --ctp-maroon: #e64553;
+  --ctp-peach: #fe640b;
+  --ctp-yellow: #df8e1d;
+  --ctp-green: #40a02b;
+  --ctp-teal: #179299;
+  --ctp-sky: #04a5e5;
+  --ctp-sapphire: #209fb5;
+  --ctp-blue: #1e66f5;
+  --ctp-lavender: #7287fd;
+  --ctp-text: #4c4f69;
+  --ctp-subtext1: #5c5f77;
+  --ctp-subtext0: #6c6f85;
+  --ctp-overlay2: #7c7f93;
+  --ctp-overlay1: #8c8fa1;
+  --ctp-overlay0: #9ca0b0;
+  --ctp-surface2: #acb0be;
+  --ctp-surface1: #bcc0cc;
+  --ctp-surface0: #ccd0da;
+  --ctp-base: #eff1f5;
+  --ctp-mantle: #e6e9ef;
+  --ctp-crust: #dce0e8;
+
   color-scheme: light;
-  --border: #d8dde3;
-  --bg-alt: #f6f7f9;
-  --primary: #2f6fed;
-  --danger: #d64545;
-  --text-muted: #6b7280;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+/* Mocha (dark) */
+[data-theme="dark"] {
+  --ctp-rosewater: #f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink: #f5c2e7;
+  --ctp-mauve: #cba6f7;
+  --ctp-red: #f38ba8;
+  --ctp-maroon: #eba0ac;
+  --ctp-peach: #fab387;
+  --ctp-yellow: #f9e2af;
+  --ctp-green: #a6e3a1;
+  --ctp-teal: #94e2d5;
+  --ctp-sky: #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue: #89b4fa;
+  --ctp-lavender: #b4befe;
+  --ctp-text: #cdd6f4;
+  --ctp-subtext1: #bac2de;
+  --ctp-subtext0: #a6adc8;
+  --ctp-overlay2: #9399b2;
+  --ctp-overlay1: #7f849c;
+  --ctp-overlay0: #6c7086;
+  --ctp-surface2: #585b70;
+  --ctp-surface1: #45475a;
+  --ctp-surface0: #313244;
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+
+  color-scheme: dark;
 }
 
-body {
-  margin: 0;
-  background: #fff;
-  color: #1a1a1a;
+/*
+ * `inline` makes Tailwind emit the var() reference rather than the resolved
+ * value, which is what lets one utility follow whichever flavor is active.
+ */
+@theme inline {
+  --color-ctp-rosewater: var(--ctp-rosewater);
+  --color-ctp-flamingo: var(--ctp-flamingo);
+  --color-ctp-pink: var(--ctp-pink);
+  --color-ctp-mauve: var(--ctp-mauve);
+  --color-ctp-red: var(--ctp-red);
+  --color-ctp-maroon: var(--ctp-maroon);
+  --color-ctp-peach: var(--ctp-peach);
+  --color-ctp-yellow: var(--ctp-yellow);
+  --color-ctp-green: var(--ctp-green);
+  --color-ctp-teal: var(--ctp-teal);
+  --color-ctp-sky: var(--ctp-sky);
+  --color-ctp-sapphire: var(--ctp-sapphire);
+  --color-ctp-blue: var(--ctp-blue);
+  --color-ctp-lavender: var(--ctp-lavender);
+  --color-ctp-text: var(--ctp-text);
+  --color-ctp-subtext1: var(--ctp-subtext1);
+  --color-ctp-subtext0: var(--ctp-subtext0);
+  --color-ctp-overlay2: var(--ctp-overlay2);
+  --color-ctp-overlay1: var(--ctp-overlay1);
+  --color-ctp-overlay0: var(--ctp-overlay0);
+  --color-ctp-surface2: var(--ctp-surface2);
+  --color-ctp-surface1: var(--ctp-surface1);
+  --color-ctp-surface0: var(--ctp-surface0);
+  --color-ctp-base: var(--ctp-base);
+  --color-ctp-mantle: var(--ctp-mantle);
+  --color-ctp-crust: var(--ctp-crust);
+
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", -apple-system, sans-serif;
 }
 
-.app {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px 24px 48px;
+/* Drive `dark:` off the attribute rather than the OS setting, so the
+   in-app toggle wins. Only needed for the rare case a token can't express. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@layer base {
+  body {
+    @apply bg-ctp-base text-ctp-text font-sans antialiased;
+  }
 }
 
-.app-header {
-  display: flex;
-  align-items: baseline;
-  gap: 24px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-}
-
-.app-header h1 {
-  font-size: 22px;
-  margin: 0;
-}
-
-.app-header nav {
-  display: flex;
-  gap: 16px;
-}
-
-.app-header nav a {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-weight: 500;
-  padding-bottom: 4px;
-}
-
-.app-header nav a.active {
-  color: var(--primary);
-  border-bottom: 2px solid var(--primary);
-}
-
-.app-header__logout {
-  margin-left: auto;
-}
-
-.app-loading {
-  padding: 48px;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-/* Login */
-.login-screen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.login-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 320px;
-  max-width: 100%;
-  padding: 28px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-.login-card h1 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.login-card p {
-  margin: 0;
-  font-size: 14px;
-}
-
-.login-card input {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-/* Avatars */
-.avatar {
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  display: inline-block;
-  vertical-align: middle;
-  background: var(--bg-alt);
-}
-
-.avatar--fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  user-select: none;
-}
-
-.avatar-cell {
-  width: 44px;
-  padding-right: 0 !important;
-}
-
-/* Photo uploader */
-.photo-uploader {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 16px 0;
-}
-
-.photo-uploader__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.photo-uploader__actions .form-error {
-  flex-basis: 100%;
-  margin: 0;
-}
-
-button {
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 14px;
-}
-
-button:hover {
-  background: var(--bg-alt);
-}
-
-button.danger,
-.link-button.danger {
-  color: var(--danger);
-  border-color: #f3c9c9;
-}
-
-.link-button {
-  border: none;
-  background: none;
-  color: var(--primary);
-  padding: 2px 6px;
-}
-
-.toolbar {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.search-input {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  min-width: 240px;
-  font-size: 14px;
-}
-
-/* Table view */
-.member-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.member-table th,
-.member-table td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.member-table th {
-  cursor: pointer;
-  user-select: none;
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 13px;
-  text-transform: uppercase;
-}
-
-.clickable-row {
-  cursor: pointer;
-}
-
-.clickable-row:hover {
-  background: var(--bg-alt);
-}
-
-.empty-cell {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 24px;
-}
-
-/* Modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 10px;
-  padding: 24px;
-  width: 420px;
-  max-width: 90vw;
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-.modal h2 {
-  margin-top: 0;
-}
-
-.modal form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.modal label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.modal input,
-.modal textarea,
-.modal select {
-  font-size: 14px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: inherit;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.form-error {
-  color: var(--danger);
-  font-size: 13px;
-}
-
-/* Detail page */
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.detail-header > div {
-  display: flex;
-  gap: 8px;
-}
-
-.detail-fields {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  row-gap: 6px;
-  margin: 16px 0;
-}
-
-.detail-fields dt {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.detail-fields dd {
-  margin: 0;
-}
-
-.muted {
-  color: var(--text-muted);
-  font-weight: normal;
-}
-
-.relation-list {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0;
-}
-
-.relation-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.relation-list a {
-  color: var(--primary);
-  cursor: pointer;
-}
-
-.add-relation {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Tree view */
-.tree-scroll {
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 24px;
-  max-height: 75vh;
-}
-
-.family-node {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
-  padding: 8px 10px;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.family-node__text {
-  min-width: 0; /* lets the name ellipsis rather than overflow the card */
-}
-
-.family-node:hover {
-  border-color: var(--primary);
-}
-
-.family-node--root {
-  border-color: var(--primary);
-  border-width: 2px;
-}
-
-.family-node--placeholder {
-  border-style: dashed;
-  background: var(--bg-alt);
-  cursor: default;
-}
-
-.family-node__name {
-  font-weight: 600;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.family-node__name-zh {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.family-node__meta {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
+@layer components {
+  /*
+   * react-family-tree draws its connector lines as <i> elements with a
+   * hardcoded `background: #999` inline style. Inline styles outrank normal
+   * CSS, so !important is the only way to bring them into the palette.
+   */
+  .tree-canvas > i {
+    background: var(--ctp-surface2) !important;
+  }
 }

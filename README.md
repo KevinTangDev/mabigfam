@@ -15,8 +15,24 @@ handle the multi-parent layout case a plain recursive tree struggles with).
   members, photo upload/serving, parent/child link management (with cycle
   prevention), and routes that resolve a member's (or the whole tree's)
   relations for the UI.
-- [`web/`](web) — Vite + React frontend. Login gate, table view, member
-  detail view (edit fields, photo, manage parent/child links), and tree view.
+- [`web/`](web) — Vite + React frontend, styled with Tailwind CSS 4 and the
+  [Catppuccin](https://catppuccin.com) palette (Latte / Mocha). Login gate,
+  table view, member detail view (edit fields, photo, manage parent/child
+  links), and tree view.
+
+## Theming
+
+Light is Catppuccin **Latte**, dark is **Mocha**, toggled from the header and
+remembered in `localStorage` (first visit follows the OS preference). An
+inline script in [`web/index.html`](web/index.html) applies the flavor before
+first paint so dark-mode users don't get a white flash.
+
+Components only use semantic `ctp-*` utilities (`bg-ctp-base`,
+`text-ctp-subtext0`, `border-ctp-surface1`, ...). Those are declared with
+Tailwind's `@theme inline` in [`web/src/index.css`](web/src/index.css) so each
+utility emits a `var()` reference and follows whichever flavor is active —
+which is why there are almost no `dark:` variants in the markup. To restyle,
+change the variables in that one file.
 
 ## Roadmap
 

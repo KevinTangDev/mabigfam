@@ -3,10 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import Avatar from "../components/Avatar";
+import { Button, cardClass, inputClass } from "../components/ui";
 import type { FamilyMember } from "../types";
 
 type SortKey = "name" | "nameZh" | "birthday" | "phone";
 type SortDir = "asc" | "desc";
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "nameZh", label: "Chinese name" },
+  { key: "birthday", label: "Birthday" },
+  { key: "phone", label: "Phone" },
+];
 
 export default function TableView() {
   const navigate = useNavigate();
@@ -44,13 +52,10 @@ export default function TableView() {
       );
     }
 
-    const sorted = [...rows].sort((a, b) => {
-      const av = a[sortKey] ?? "";
-      const bv = b[sortKey] ?? "";
-      const cmp = av.localeCompare(bv);
+    return [...rows].sort((a, b) => {
+      const cmp = (a[sortKey] ?? "").localeCompare(b[sortKey] ?? "");
       return sortDir === "asc" ? cmp : -cmp;
     });
-    return sorted;
   }, [members, search, sortKey, sortDir]);
 
   function toggleSort(key: SortKey) {
@@ -68,65 +73,90 @@ export default function TableView() {
     load();
   }
 
-  function sortIndicator(key: SortKey) {
-    if (key !== sortKey) return "";
-    return sortDir === "asc" ? " ▲" : " ▼";
-  }
-
   return (
     <div>
-      <div className="toolbar">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
-          className="search-input"
           placeholder="Filter by name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className={`${inputClass} max-w-xs`}
         />
-        <button onClick={() => setShowCreate(true)}>+ Add member</button>
+        <span className="text-sm text-ctp-subtext0">
+          {filtered.length} {filtered.length === 1 ? "member" : "members"}
+        </span>
+        <Button variant="primary" onClick={() => setShowCreate(true)} className="ml-auto">
+          + Add member
+        </Button>
       </div>
 
-      {error && <p className="form-error">{error}</p>}
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <table className="member-table">
-          <thead>
-            <tr>
-              <th className="avatar-cell"></th>
-              <th onClick={() => toggleSort("name")}>Name{sortIndicator("name")}</th>
-              <th onClick={() => toggleSort("nameZh")}>Chinese name{sortIndicator("nameZh")}</th>
-              <th onClick={() => toggleSort("birthday")}>Birthday{sortIndicator("birthday")}</th>
-              <th onClick={() => toggleSort("phone")}>Phone{sortIndicator("phone")}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => (
-              <tr key={m.id} className="clickable-row" onClick={() => navigate(`/members/${m.id}`)}>
-                <td className="avatar-cell">
-                  <Avatar member={m} size={32} />
-                </td>
-                <td>{m.name}</td>
-                <td>{m.nameZh ?? "—"}</td>
-                <td>{m.birthday ? m.birthday.slice(0, 10) : "—"}</td>
-                <td>{m.phone ?? "—"}</td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <button className="link-button danger" onClick={() => handleDelete(m.id, m.name)}>
-                    Delete
-                  </button>
-                </td>
+      {error && <p className="mb-3 text-sm text-ctp-red">{error}</p>}
+
+      <div className={`${cardClass} overflow-hidden`}>
+        {loading ? (
+          <p className="p-6 text-sm text-ctp-subtext0">Loading...</p>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-ctp-surface0 bg-ctp-crust/40">
+                <th className="w-14" />
+                {COLUMNS.map((col) => (
+                  <th
+                    key={col.key}
+                    onClick={() => toggleSort(col.key)}
+                    className="cursor-pointer select-none px-3 py-2.5 text-left text-xs font-semibold
+                               tracking-wide text-ctp-subtext0 uppercase transition hover:text-ctp-text"
+                  >
+                    {col.label}
+                    <span className="ml-1 text-ctp-blue">
+                      {sortKey === col.key ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                    </span>
+                  </th>
+                ))}
+                <th />
               </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={6} className="empty-cell">
-                  No family members found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {filtered.map((m) => (
+                <tr
+                  key={m.id}
+                  onClick={() => navigate(`/members/${m.id}`)}
+                  className="group cursor-pointer border-b border-ctp-surface0/60 transition
+                             last:border-0 hover:bg-ctp-surface0/50"
+                >
+                  <td className="py-2 pl-3">
+                    <Avatar member={m} size={34} />
+                  </td>
+                  <td className="px-3 py-2 font-medium">{m.name}</td>
+                  <td className="px-3 py-2 text-ctp-subtext1">{m.nameZh ?? "—"}</td>
+                  <td className="px-3 py-2 text-ctp-subtext1">
+                    {m.birthday ? m.birthday.slice(0, 10) : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-ctp-subtext1">{m.phone ?? "—"}</td>
+                  <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDelete(m.id, m.name)}
+                      className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+                    >
+                      Delete
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-3 py-10 text-center text-ctp-subtext0">
+                    {members.length === 0
+                      ? "No family members yet — add the first one."
+                      : "No members match that filter."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {showCreate && (
         <MemberFormModal
