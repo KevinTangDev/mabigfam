@@ -1,21 +1,77 @@
 import type { FamilyMember, FamilyMemberInput, MemberRelations, ParentChildLink, TreeData } from "../types";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Called when the API reports we're no longer signed in (expired or cleared
+ * session), so the app can drop back to the login screen instead of showing
+ * a wall of failed requests. Registered by AuthProvider.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: () => void) {
+  onUnauthorized = handler;
+}
+
+async function handle<T>(res: Response, isLoginRequest: boolean): Promise<T> {
+  if (res.status === 401 && !isLoginRequest) {
+    onUnauthorized?.();
+  }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
+    const body = await res.json().catch(() => ({}) as { error?: unknown });
+    const message =
+      typeof body.error === "string"
+        ? body.error
+        : body.error
+          ? JSON.stringify(body.error)
+          : `Request failed: ${res.status}`;
+    throw new ApiError(message, res.status);
   }
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  return handle<T>(res, path.startsWith("/auth/login"));
+}
+
+/** Multipart variant: the browser must set Content-Type itself (boundary). */
+async function upload<T>(path: string, body: FormData): Promise<T> {
+  const res = await fetch(`/api${path}`, { method: "POST", body });
+  return handle<T>(res, false);
+}
+
+/** URL for a stored photo. `photoPath` is the opaque key from the API. */
+export function photoUrl(photoPath: string): string {
+  return `/api/photos/${photoPath}`;
+}
+
 export const api = {
+  // --- auth ---
+  getSession: () => request<{ authenticated: boolean }>("/auth/session"),
+
+  login: (password: string) =>
+    request<{ authenticated: boolean }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
+  logout: () => request<{ authenticated: boolean }>("/auth/logout", { method: "POST" }),
+
+  // --- members ---
   listMembers: (search?: string) =>
     request<FamilyMember[]>(`/members${search ? `?search=${encodeURIComponent(search)}` : ""}`),
 
@@ -31,6 +87,16 @@ export const api = {
 
   deleteMember: (id: string) => request<void>(`/members/${id}`, { method: "DELETE" }),
 
+  // --- photos ---
+  uploadPhoto: (id: string, file: File) => {
+    const form = new FormData();
+    form.append("photo", file);
+    return upload<FamilyMember>(`/members/${id}/photo`, form);
+  },
+
+  deletePhoto: (id: string) => request<FamilyMember>(`/members/${id}/photo`, { method: "DELETE" }),
+
+  // --- links ---
   listLinks: () => request<ParentChildLink[]>("/links"),
 
   createLink: (parentId: string, childId: string) =>

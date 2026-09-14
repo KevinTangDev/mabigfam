@@ -2,8 +2,20 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import TableView from "./pages/TableView";
 import MemberDetail from "./pages/MemberDetail";
 import TreeView from "./pages/TreeView";
+import LoginScreen from "./pages/LoginScreen";
+import { useAuth } from "./auth/AuthContext";
 
 export default function App() {
+  const { authenticated, logout } = useAuth();
+
+  if (authenticated === null) {
+    return <div className="app-loading">Loading...</div>;
+  }
+
+  if (!authenticated) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -14,6 +26,9 @@ export default function App() {
           </NavLink>
           <NavLink to="/tree">Tree</NavLink>
         </nav>
+        <button className="link-button app-header__logout" onClick={logout}>
+          Sign out
+        </button>
       </header>
 
       <main className="app-main">

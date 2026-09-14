@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
+import Avatar from "../components/Avatar";
 import type { FamilyMember } from "../types";
 
 type SortKey = "name" | "nameZh" | "birthday" | "phone";
@@ -91,6 +92,7 @@ export default function TableView() {
         <table className="member-table">
           <thead>
             <tr>
+              <th className="avatar-cell"></th>
               <th onClick={() => toggleSort("name")}>Name{sortIndicator("name")}</th>
               <th onClick={() => toggleSort("nameZh")}>Chinese name{sortIndicator("nameZh")}</th>
               <th onClick={() => toggleSort("birthday")}>Birthday{sortIndicator("birthday")}</th>
@@ -101,6 +103,9 @@ export default function TableView() {
           <tbody>
             {filtered.map((m) => (
               <tr key={m.id} className="clickable-row" onClick={() => navigate(`/members/${m.id}`)}>
+                <td className="avatar-cell">
+                  <Avatar member={m} size={32} />
+                </td>
                 <td>{m.name}</td>
                 <td>{m.nameZh ?? "—"}</td>
                 <td>{m.birthday ? m.birthday.slice(0, 10) : "—"}</td>
@@ -114,7 +119,7 @@ export default function TableView() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="empty-cell">
+                <td colSpan={6} className="empty-cell">
                   No family members found.
                 </td>
               </tr>

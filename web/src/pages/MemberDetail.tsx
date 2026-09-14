@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
+import PhotoUploader from "../components/PhotoUploader";
+import Avatar from "../components/Avatar";
 import type { FamilyMember, MemberRelations, ParentChildLink } from "../types";
 
 export default function MemberDetail() {
@@ -101,6 +103,11 @@ export default function MemberDetail() {
         </div>
       </div>
 
+      <PhotoUploader
+        member={member}
+        onChange={(updated) => setMember({ ...member, ...updated })}
+      />
+
       <dl className="detail-fields">
         <dt>Birthday</dt>
         <dd>{member.birthday ? member.birthday.slice(0, 10) : "—"}</dd>
@@ -119,6 +126,7 @@ export default function MemberDetail() {
         <ul className="relation-list">
           {member.parents.map((p) => (
             <li key={p.id}>
+              <Avatar member={p} size={28} />
               <a onClick={() => navigate(`/members/${p.id}`)}>{p.name}</a>
               <button className="link-button danger" onClick={() => removeLink(p.id, member.id)}>
                 Remove
@@ -147,6 +155,7 @@ export default function MemberDetail() {
         <ul className="relation-list">
           {member.children.map((c) => (
             <li key={c.id}>
+              <Avatar member={c} size={28} />
               <a onClick={() => navigate(`/members/${c.id}`)}>{c.name}</a>
               <button className="link-button danger" onClick={() => removeLink(member.id, c.id)}>
                 Remove

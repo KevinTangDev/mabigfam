@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db.js";
+import { deletePhoto } from "../storage.js";
 
 const memberInput = z.object({
   name: z.string().min(1, "name is required"),
@@ -86,7 +87,13 @@ export async function familyMemberRoutes(app: FastifyInstance) {
   // Delete a member (cascades to their ParentChild links).
   app.delete<{ Params: { id: string } }>("/api/members/:id", async (request, reply) => {
     try {
-      await prisma.familyMember.delete({ where: { id: request.params.id } });
+      const deleted = await prisma.familyMember.delete({ where: { id: request.params.id } });
+
+      // Remove the photo file too, so deleted members don't leave orphans on disk.
+      if (deleted.photoPath) {
+        await deletePhoto(deleted.photoPath);
+      }
+
       return reply.status(204).send();
     } catch {
       return reply.status(404).send({ error: "Family member not found" });

@@ -55,6 +55,97 @@ body {
   border-bottom: 2px solid var(--primary);
 }
 
+.app-header__logout {
+  margin-left: auto;
+}
+
+.app-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Login */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+  max-width: 100%;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.login-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.login-card input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Avatars */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  background: var(--bg-alt);
+}
+
+.avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.avatar-cell {
+  width: 44px;
+  padding-right: 0 !important;
+}
+
+/* Photo uploader */
+.photo-uploader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.photo-uploader__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-uploader__actions .form-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 button {
   cursor: pointer;
   border: 1px solid var(--border);
@@ -263,6 +354,9 @@ button.danger,
 
 .family-node {
   position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
@@ -270,6 +364,10 @@ button.danger,
   cursor: pointer;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.family-node__text {
+  min-width: 0; /* lets the name ellipsis rather than overflow the card */
 }
 
 .family-node:hover {

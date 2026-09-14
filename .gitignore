@@ -10,6 +10,9 @@ build/
 prisma/*.db
 prisma/*.db-journal
 
+# Uploaded family photos — never commit these
+server/uploads/
+
 # Editor
 .vscode/
 .idea/
