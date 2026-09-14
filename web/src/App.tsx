@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import TableView from "./pages/TableView";
 import MemberDetail from "./pages/MemberDetail";
 import TreeView from "./pages/TreeView";
@@ -8,6 +8,7 @@ import LoginScreen from "./pages/LoginScreen";
 import { useAuth } from "./auth/AuthContext";
 import { useTheme } from "./theme/ThemeProvider";
 import { Button } from "./components/ui";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function ThemeToggle() {
   const { flavor, toggle } = useTheme();
@@ -25,6 +26,7 @@ function ThemeToggle() {
 
 export default function App() {
   const { authenticated, logout } = useAuth();
+  const location = useLocation();
 
   if (authenticated === null) {
     return <div className="p-12 text-center text-sm text-ctp-subtext0">Loading...</div>;
@@ -73,14 +75,17 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-6">
-        <Routes>
-          <Route path="/" element={<TableView />} />
-          <Route path="/members/:id" element={<MemberDetail />} />
-          <Route path="/tree" element={<TreeView />} />
-          <Route path="/tree/:rootId" element={<TreeView />} />
-          <Route path="/calendar" element={<CalendarView />} />
-          <Route path="/game" element={<GameView />} />
-        </Routes>
+        {/* Keyed on the route so navigating away clears a previous crash. */}
+        <ErrorBoundary key={location.pathname}>
+          <Routes>
+            <Route path="/" element={<TableView />} />
+            <Route path="/members/:id" element={<MemberDetail />} />
+            <Route path="/tree" element={<TreeView />} />
+            <Route path="/tree/:rootId" element={<TreeView />} />
+            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/game" element={<GameView />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
     </div>
   );

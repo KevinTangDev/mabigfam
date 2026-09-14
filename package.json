@@ -22,5 +22,10 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"
+  },
+  "//overrides": "react-family-tree and react-router declare open-ended peers (react >=16), so npm is free to satisfy them with a newer hoisted copy than web's pinned 18.3.1. When that happens react-family-tree builds elements with a different React than the app renders with, React throws, and the whole app unmounts — the Tree view goes blank. Pinning here forces one copy for every dependent. web/test/singleReact.test.ts guards it.",
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }

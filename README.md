@@ -142,7 +142,24 @@ watches.
   cycle prevention, partnership rules, and cascade behaviour.
 - **`web/test`** — unit tests for the relatives-tree graph builder (siblings,
   half-siblings, explicit vs inferred partners) and the calendar date helpers
-  (end-exclusive ranges, birthday rollover, leap days).
+  (end-exclusive ranges, birthday rollover, leap days); jsdom render tests
+  that mount the real Tree view over stubbed API data; and a guard that fails
+  if a second copy of React ever gets installed (see below).
+
+### The duplicate-React trap
+
+`react-family-tree` and `react-router` declare open-ended peers
+(`react >=16`), so npm is free to satisfy them with a *newer hoisted copy*
+than `web`'s pinned 18.3.1. When that happens `react-family-tree` builds
+elements with one React while the app renders with another, React throws
+`A React Element from an older version of React was rendered`, and the whole
+app unmounts — the Tree view becomes a blank page with no visible clue.
+
+Three things guard against it now: `overrides` in the root `package.json`
+pinning both packages, `resolve.dedupe` in the Vite/Vitest config, and
+`web/test/singleReact.test.ts`, which fails if more than one copy is on disk.
+If the Tree view is ever blank again, run `npm test` first — and check
+`npm ls react --all`.
 
 The integration tests copy `schema.prisma` to a temp directory with the
 datasource URL rewritten and migrate a throwaway database, so they can never
