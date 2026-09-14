@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./mabigfam.db"
+}
+
+model FamilyMember {
+  id        String    @id @default(uuid())
+  name      String
+  nameZh    String?
+  birthday  DateTime?
+  phone     String?
+  address   String?
+  note      String?
+  photoPath String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Rows where this member is the parent
+  childLinks  ParentChild[] @relation("ParentRelation")
+  // Rows where this member is the child
+  parentLinks ParentChild[] @relation("ChildRelation")
+
+  @@map("family_members")
+}
+
+model ParentChild {
+  id       String @id @default(uuid())
+  parentId String
+  childId  String
+
+  parent FamilyMember @relation("ParentRelation", fields: [parentId], references: [id], onDelete: Cascade)
+  child  FamilyMember @relation("ChildRelation", fields: [childId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, childId])
+  @@map("parent_child")
+}
