@@ -14,10 +14,12 @@
     "prisma:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=prisma/schema.prisma",
     "build": "npm run build --workspace=server && npm run build --workspace=web",
-    "test": "npm run test --workspace=server && npm run test --workspace=web"
+    "test": "npm run test --workspace=server && npm run test --workspace=web",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "concurrently": "9.1.2",
+    "patch-package": "8.0.1",
     "prisma": "6.19.3"
   },
   "dependencies": {

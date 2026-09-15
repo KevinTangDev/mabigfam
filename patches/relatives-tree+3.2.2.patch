@@ -1,0 +1,29 @@
+diff --git a/node_modules/relatives-tree/lib/children/arrange.js b/node_modules/relatives-tree/lib/children/arrange.js
+index 18edf98..4f8dc67 100644
+--- a/node_modules/relatives-tree/lib/children/arrange.js
++++ b/node_modules/relatives-tree/lib/children/arrange.js
+@@ -5,9 +5,21 @@ import { arrangeParentsIn } from '../utils/arrangeParentsIn';
+ const arrangeNextFamily = (family, nextFamily, right) => {
+     const unit = family.parents[0];
+     const index = nextFamily.children.findIndex(sameAs(unit));
+-    index === 0
+-        ? (nextFamily.X = getUnitX(family, unit) - nextFamily.children[index].pos)
+-        : (nextFamily.children[index].pos = getUnitX(family, unit) - nextFamily.X);
++    // PATCH (mabigfam): the original unconditionally read/wrote
++    // nextFamily.children[index], assuming a match is always found. When it
++    // isn't (index === -1, or an engine that orders equal-priority steps
++    // differently ends up with an empty/out-of-range slot here — observed in
++    // Firefox but not Chromium for an otherwise ordinary two-parent family),
++    // nextFamily.children[index] is undefined and reading/writing .pos threw,
++    // crashing the whole tree render. Skipping the positional adjustment in
++    // that case is a safe no-op: the rest of arrangeFamiliesFunc still runs,
++    // at worst a touch less optimally positioned rather than not rendering.
++    const targetChild = nextFamily.children[index];
++    if (targetChild) {
++        index === 0
++            ? (nextFamily.X = getUnitX(family, unit) - targetChild.pos)
++            : (targetChild.pos = getUnitX(family, unit) - nextFamily.X);
++    }
+     const nextIdx = nextIndex(index);
+     if (nextFamily.children[nextIdx]) {
+         correctUnitsShift(nextFamily.children.slice(nextIdx), right - getUnitX(nextFamily, nextFamily.children[nextIdx]));

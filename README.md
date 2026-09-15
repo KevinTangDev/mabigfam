@@ -208,6 +208,22 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
   only one side, e.g. a child with just one parent linked whose parent has a
   partner, since the library models children as belonging to a couple.
   Linking the second parent usually fixes it.
+- **`relatives-tree` is patched** (via [patch-package](https://www.npmjs.com/package/patch-package),
+  see [`patches/`](patches/)). Its `arrangeNextFamily` function assumed a
+  lookup always succeeds and read/wrote a `.pos` property on the result
+  without checking — reachable even for an ordinary two-parent family with
+  shared children, reliably in Firefox and never observed in Chromium (this
+  class of bug — an array/property access whose success depends on
+  iteration order that the spec leaves engines free to differ on — is a
+  known source of Chrome/Firefox divergence for otherwise "pure" code, though
+  the exact mechanism here wasn't pinned down). The library is at its latest
+  version (3.2.2) with no newer release and no matching upstream issue, so
+  this patches the one function to skip the positional adjustment instead of
+  throwing when the lookup fails, rather than not rendering at all. The
+  patch reapplies automatically via `postinstall` — if `npm install` ever
+  reports it failing to apply, the upstream file has changed shape and the
+  patch needs regenerating (edit `node_modules/relatives-tree/lib/children/arrange.js`
+  the same way, then run `npx patch-package relatives-tree`).
 - Partnerships are explicit (`Partnership`, with married/partner/divorced),
   but two people who share a child and have no recorded partnership are
   still *inferred* as a couple so older data keeps rendering sensibly.
