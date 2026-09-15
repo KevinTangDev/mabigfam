@@ -5,6 +5,7 @@ import calcTree from "relatives-tree";
 import type { ExtNode } from "relatives-tree/lib/types";
 import { api } from "../api/client";
 import { buildRelativesTreeNodes } from "../lib/buildRelativesTree";
+import { connectedComponent } from "../lib/connectedComponent";
 import { buildPartnerConnectors, type PartnerConnector } from "../lib/partnerConnectors";
 import FamilyNodeCard from "../components/FamilyNodeCard";
 import { cardClass, inputClass } from "../components/ui";
@@ -99,33 +100,55 @@ export default function TreeView() {
   }, [data]);
 
   /*
-   * relatives-tree is run here first, in a try/catch, before handing the same
-   * graph to <ReactFamilyTree> (which calls it internally). Two reasons:
+   * relatives-tree is handed only the root's own connected family — the
+   * people reachable through parent, child and partner links — rather than
+   * every member in the app. Selecting someone unrelated to everyone else
+   * (or a founder in a separate branch) should show just them, or their own
+   * descendants, not a warning about every other family in the database.
+   * It also means relatives-tree's layout never has to reason about more
+   * than one connected group of people at once, which is the most likely
+   * source of a crash reported against a shape we could no longer reproduce
+   * once the data had changed — its layout code is grouped around exactly
+   * that concept ("root families").
+   */
+  const componentNodes = useMemo(() => {
+    if (!rootId) return [];
+    const component = connectedComponent(rootId, nodes);
+    return nodes.filter((n) => component.has(n.id));
+  }, [nodes, rootId]);
+
+  /*
+   * calcTree is run here first, in a try/catch, before handing the same
+   * nodes to <ReactFamilyTree> (which calls it internally). Two reasons:
    *
    * 1. Its layout code can throw on graph shapes it doesn't model — and a
    *    throw inside render blanks the page. Catching it turns that into a
-   *    message that says which family is involved.
-   * 2. It only lays out the family reachable from the root *through couples*,
-   *    so some members can be silently absent. Comparing its output against
-   *    the member list is the only way to tell the user who's missing.
+   *    message instead.
+   * 2. Even within one connected family, it lays out children as belonging
+   *    to a *couple* — so a child with only one parent recorded, whose
+   *    parent has a partner, can still be silently dropped. Comparing its
+   *    output against componentNodes is the only way to catch that.
    */
   const layout = useMemo(() => {
-    if (!rootId || !nodes.some((n) => n.id === rootId)) return null;
+    if (!rootId || componentNodes.length === 0) return null;
     try {
-      return { nodes: calcTree(nodes, { rootId }).nodes, error: null as string | null };
+      return { nodes: calcTree(componentNodes, { rootId }).nodes, error: null as string | null };
     } catch (err) {
       return {
         nodes: [],
         error: err instanceof Error ? err.message : "The tree layout failed unexpectedly.",
       };
     }
-  }, [nodes, rootId]);
+  }, [componentNodes, rootId]);
 
   const missing = useMemo(() => {
-    if (!data || !layout || layout.error) return [];
+    if (!layout || layout.error) return [];
     const shown = new Set(layout.nodes.map((n) => n.id));
-    return data.members.filter((m) => !shown.has(m.id));
-  }, [data, layout]);
+    return componentNodes
+      .filter((n) => !shown.has(n.id))
+      .map((n) => memberById.get(n.id))
+      .filter((m): m is FamilyMember => !!m);
+  }, [componentNodes, layout, memberById]);
 
   const partnerConnectors = useMemo(() => {
     if (!layout || layout.error) return [];
@@ -194,10 +217,9 @@ export default function TreeView() {
             {missing.length} {missing.length === 1 ? "person isn't" : "people aren't"} shown here
           </h3>
           <p className="mt-1 text-sm text-ctp-subtext0">
-            This view only draws the family connected to{" "}
-            <strong>{memberById.get(rootId)?.name}</strong> through parent and partner links.
-            Someone with only one parent recorded, whose parent has a partner, also falls outside
-            it — linking their second parent usually brings them in.
+            The layout couldn't place everyone in this family. This usually means a relationship
+            recorded on only one side — a child with just one parent linked, whose parent has a
+            partner, can fall through. Linking the second parent usually fixes it.
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {missing.map((m) => (
@@ -221,7 +243,7 @@ export default function TreeView() {
         <div className={`${cardClass} max-h-[75vh] overflow-auto p-6`}>
           <div className="relative inline-block">
             <ReactFamilyTree
-              nodes={nodes}
+              nodes={componentNodes}
               rootId={rootId}
               width={CELL_WIDTH}
               height={CELL_HEIGHT}

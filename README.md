@@ -196,12 +196,18 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
   how to convert it.
 - `FamilyMember` has no `gender` field, which relatives-tree uses only for
   its own styling — irrelevant here since the node cards are custom.
-- **The tree only draws one connected family.** relatives-tree lays out the
-  people reachable from the selected root *through parent and partner links*.
-  Anyone outside that is listed above the tree rather than silently omitted —
-  including the non-obvious case of a child with only one parent recorded
-  whose parent has a partner, since the library models children as belonging
-  to a couple. Linking the second parent brings them in.
+- **The tree draws only the selected person's own connected family** — the
+  people reachable from the root through parent, child and partner links
+  (computed in [`connectedComponent.ts`](web/src/lib/connectedComponent.ts)).
+  Selecting someone in a different, unrelated family shows just their side;
+  selecting someone with no relationships at all shows them alone, with no
+  warning. This also keeps relatives-tree from ever having to lay out more
+  than one connected family at once, which its own layout code is not built
+  for. If the layout still can't place everyone *within* the selected
+  family, a banner lists who — the usual cause is a relationship recorded on
+  only one side, e.g. a child with just one parent linked whose parent has a
+  partner, since the library models children as belonging to a couple.
+  Linking the second parent usually fixes it.
 - Partnerships are explicit (`Partnership`, with married/partner/divorced),
   but two people who share a child and have no recorded partnership are
   still *inferred* as a couple so older data keeps rendering sensibly.

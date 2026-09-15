@@ -271,15 +271,81 @@ describe("TreeView", () => {
     expect(container.textContent).not.toMatch(/shown here/i);
   });
 
-  it("also reports members with no relationships at all", async () => {
+  /**
+   * The tree only lays out the root's own connected family (see
+   * connectedComponent.ts) — a separate, unrelated family elsewhere in the
+   * database is not "missing", it's simply a different family, and showing
+   * a warning about it was exactly the noise this behaviour replaces.
+   */
+  it("says nothing about an unrelated, separate family", async () => {
     const container = await renderTree({
       members: [member("a", "Linked One"), member("b", "Linked Two"), member("z", "Unconnected")],
       links: [{ id: "l1", parentId: "a", childId: "b", createdAt: "" }],
       partnerships: [],
     });
 
-    expect(container.textContent).toMatch(/shown here/i);
-    expect(container.textContent).toContain("Unconnected");
+    expect(container.textContent).not.toMatch(/shown here/i);
+    expect(cards()).toHaveLength(2);
+  });
+
+  it("renders only the root's own family when the database holds several", async () => {
+    const container = await renderTree({
+      members: [
+        member("a", "Linked One"),
+        member("b", "Linked Two"),
+        member("z1", "Stranger One"),
+        member("z2", "Stranger Two"),
+      ],
+      links: [
+        { id: "l1", parentId: "a", childId: "b", createdAt: "" },
+        { id: "l2", parentId: "z1", childId: "z2", createdAt: "" },
+      ],
+      partnerships: [],
+    });
+
+    expect(cards()).toHaveLength(2);
+    expect(container.textContent).toContain("Linked One");
+    expect(container.textContent).toContain("Linked Two");
+    // Rendered card text only — the strangers still appear in the root
+    // <select>, so this checks the tree canvas specifically.
+    const canvasText = document.querySelector(".tree-canvas")?.textContent ?? "";
+    expect(canvasText).not.toContain("Stranger");
+  });
+
+  /**
+   * The behaviour the user actually asked for: selecting someone with no
+   * parent, no children and no partner shows them alone — no error, no
+   * "isn't shown" warning about every unrelated person in the database.
+   */
+  it("shows a fully isolated member alone, with no warning", async () => {
+    const container = await renderTree({
+      members: [
+        member("solo", "All Alone"),
+        member("a", "Unrelated One"),
+        member("b", "Unrelated Two"),
+      ],
+      links: [{ id: "l1", parentId: "a", childId: "b", createdAt: "" }],
+      partnerships: [],
+    });
+
+    expect(cards()).toHaveLength(1);
+    expect(container.textContent).toContain("All Alone");
+    expect(container.textContent).not.toMatch(/shown here/i);
+    expect(container.textContent).not.toMatch(/can't be laid out/i);
+  });
+
+  /**
+   * The other half of the request: a founder (no parent recorded) with
+   * descendants shows their own tree, not an error.
+   */
+  it("shows a parentless founder's own descendants, not an error", async () => {
+    const container = await renderTree(coupleWithTwoKids);
+    const cardText = document.querySelector(".tree-canvas")?.textContent ?? "";
+
+    expect(container.textContent).not.toMatch(/can't be laid out/i);
+    expect(cardText).toContain("Hung VENG");
+    expect(cardText).toContain("Kevin TANG");
+    expect(cardText).toContain("Thierry TANG");
   });
 });
 
