@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, downloadFile } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
@@ -32,7 +32,10 @@ export default function MemberDetail() {
   const [newPartnerStatus, setNewPartnerStatus] = useState<PartnershipStatus>("married");
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  // Reused as a refetch helper after every mutation below, not just on
+  // mount — wrapped in useCallback (keyed on `id`) so the mount effect's
+  // dependency on it is accurate rather than re-running every render.
+  const load = useCallback(async () => {
     if (!id) return;
     const [relations, allLinks, members] = await Promise.all([
       api.getMemberRelations(id),
@@ -42,11 +45,11 @@ export default function MemberDetail() {
     setMember(relations);
     setLinks(allLinks);
     setAllMembers(members);
-  }
+  }, [id]);
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [load]);
 
   if (!member) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
 

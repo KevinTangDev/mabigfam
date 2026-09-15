@@ -9,6 +9,12 @@ function cell(value: string | null | undefined): string {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
+// U+FEFF as a named constant rather than a literal character in a template
+// string — the raw character is invisible in an editor/diff and trips
+// eslint's no-irregular-whitespace (correctly, for accidental cases; this
+// one is deliberate, see membersToCsv below).
+const UTF8_BOM = String.fromCharCode(0xfeff);
+
 const HEADERS = [
   "Name",
   "Chinese name",
@@ -48,5 +54,5 @@ export function membersToCsv(members: FamilyMember[], relations: CsvRelations): 
 
   const lines = [HEADERS.map(cell).join(","), ...rows.map((r) => r.join(","))];
 
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return `${UTF8_BOM}${lines.join("\r\n")}\r\n`;
 }

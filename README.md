@@ -160,6 +160,27 @@ A step-by-step guide for a Proxmox LXC container specifically is in
 [`docs/deploy-proxmox.md`](docs/deploy-proxmox.md), including a systemd
 service file and an update/backup workflow.
 
+## Lint & typecheck
+
+```bash
+npm run typecheck   # tsc, both workspaces
+npm run lint        # eslint, both workspaces
+npm run check       # typecheck + lint + test, in that order
+```
+
+ESLint 10 flat config, one `eslint.config.js` per workspace (different
+globals/plugins: `web`'s needs React + browser globals, `server`'s doesn't).
+`web`'s config turns off two rules from `eslint-plugin-react-hooks`'s
+React-Compiler-derived "recommended" set —  `set-state-in-effect` and
+`purity` — because they flag patterns used deliberately throughout this app
+(fetching on mount via `useEffect` + `setState`, `Date.now()` inside a
+`useMemo` that only needs to be stable across re-renders, not across time);
+see the comment in `web/eslint.config.js` for the reasoning. Everything else
+in both configs' `recommended` sets is on, including the rules that already
+did their job during setup — `web`'s `exhaustive-deps` caught a real stale
+closure in `MemberDetail.tsx`, fixed by wrapping its refetch helper in
+`useCallback`.
+
 ## Tests
 
 ```bash
@@ -273,15 +294,19 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
   `datasource { url = "..." }` form used in `schema.prisma` in favor of a
   `prisma.config.ts` + driver-adapter setup, which would mean rewriting the
   schema this project shipped with.
-- `npm audit` reports 2 accepted-risk findings that only a breaking major
-  upgrade would clear, both low-impact for this app: a stack-exhaustion DoS
+- `npm audit` reports 3 accepted-risk findings that only a breaking major
+  upgrade would clear, all low-impact for this app: a stack-exhaustion DoS
   in `deepmerge-ts`, pulled in by the Prisma **CLI's** own config loader
-  (not a runtime dependency — fixed only by Prisma 8, see above), and two
+  (not a runtime dependency — fixed only by Prisma 8, see above); two
   moderate `react-router` advisories fixed only in React Router v7 (a
   breaking API migration) — one is an SSR hydration issue that doesn't apply
   here (this app is a client-only SPA), the other an open-redirect in
   `<Link>`/`useNavigate` that requires navigating to attacker-controlled
-  paths, which this app never does. Don't run `npm audit fix --force`
-  reflexively: in this npm-workspaces layout it has previously misattributed
+  paths, which this app never does; and a path-traversal advisory in
+  `@vitest/mocker` (fixed only in Vitest 5) — `vitest` is a devDependency
+  only, never bundled or shipped, and the vulnerable path is a browser-mode
+  dev-server feature this project doesn't use. Don't run `npm audit fix
+  --force` reflexively: in this npm-workspaces layout it has previously
+  misattributed
   hoisted deps into the wrong workspace's `package.json` (e.g. adding
   `fastify` to `web` and `vite`/`react-router-dom` to `server`).

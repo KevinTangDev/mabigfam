@@ -22,12 +22,21 @@ npm run dev                          # server :3001 + web :5173 concurrently
 npm run dev:server                   # server only (tsx watch)
 npm run dev:web                      # web only (vite)
 npm run build                        # tsc + vite build, both workspaces
+npm run typecheck                    # tsc, both workspaces, no emit
+npm run lint                         # eslint, both workspaces
 npm test                             # both test suites
+npm run check                        # typecheck + lint + test, in that order
 ```
 
-No lint/typecheck script is wired up at the root. Typecheck a workspace
-directly: `npx tsc --noEmit -p tsconfig.json` (server) or `npx tsc -b
-tsconfig.json` (web).
+`lint`/`typecheck`/`test` are each defined per-workspace too
+(`npm run lint --workspace=web`, etc.), which is what the root scripts call.
+Each workspace has its own `eslint.config.js` (flat config) — different
+globals/plugins per environment, not one shared config. `web`'s turns off
+two rules from `eslint-plugin-react-hooks`'s newer React-Compiler-derived
+rule set (`set-state-in-effect`, `purity`) that conflict with patterns used
+deliberately throughout the app (fetch-on-mount via `useEffect`+`setState`,
+mainly) — see the comment block in `web/eslint.config.js` before assuming
+either rule should just be re-enabled.
 
 ### Running a single test
 
