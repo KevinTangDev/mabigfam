@@ -367,6 +367,29 @@ describe("TreeView when the layout library fails", () => {
       expect(container.textContent).toContain("nextFamily.children");
       // The rest of the page survives: the root picker is still usable.
       expect(container.querySelector("select")).toBeTruthy();
+      // Offers a one-click reload — the most useful thing to try if this is
+      // actually stale HMR state rather than a live data problem.
+      expect(container.textContent).toMatch(/reload the page/i);
+    } finally {
+      vi.doUnmock("relatives-tree");
+      vi.resetModules();
+    }
+  });
+
+  it("surfaces the stack trace when the engine provides one, for diagnosing a repeat report", async () => {
+    vi.doMock("relatives-tree", () => ({
+      default: () => {
+        const err = new Error("can't access property \"pos\", nextFamily.children[index] is undefined");
+        err.stack = "TypeError: can't access property \"pos\"\n    at arrangeNextFamily (arrange.js:9:14)";
+        throw err;
+      },
+    }));
+    vi.resetModules();
+
+    try {
+      const container = await renderTree(coupleWithTwoKids);
+      expect(container.textContent).toContain("arrangeNextFamily");
+      expect(container.textContent).toContain("arrange.js");
     } finally {
       vi.doUnmock("relatives-tree");
       vi.resetModules();

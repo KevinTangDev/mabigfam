@@ -132,11 +132,19 @@ export default function TreeView() {
   const layout = useMemo(() => {
     if (!rootId || componentNodes.length === 0) return null;
     try {
-      return { nodes: calcTree(componentNodes, { rootId }).nodes, error: null as string | null };
+      return {
+        nodes: calcTree(componentNodes, { rootId }).nodes,
+        error: null as string | null,
+        detail: null as string | null,
+      };
     } catch (err) {
       return {
         nodes: [],
         error: err instanceof Error ? err.message : "The tree layout failed unexpectedly.",
+        // The stack (when the engine provides one) is what would actually let
+        // this be tracked down if it recurs — the bare message alone doesn't
+        // say which internal function or data shape was involved.
+        detail: err instanceof Error && err.stack ? err.stack : null,
       };
     }
   }, [componentNodes, rootId]);
@@ -205,9 +213,30 @@ export default function TreeView() {
             person above usually works. It's often caused by a relationship that's only recorded
             on one side — check that children have both parents linked.
           </p>
+          <p className="mt-2 text-sm text-ctp-subtext0">
+            If this keeps happening for a family that looks fine (e.g. a simple parents-and-kids
+            group), it may be stale code left over from a page that's been open a long time —{" "}
+            <button
+              onClick={() => window.location.reload()}
+              className="cursor-pointer font-medium text-ctp-blue underline underline-offset-2"
+            >
+              reload the page
+            </button>{" "}
+            and try again before assuming the data is at fault.
+          </p>
           <pre className="mt-3 overflow-auto rounded-lg bg-ctp-crust/60 p-3 text-xs text-ctp-peach">
             {layout.error}
           </pre>
+          {layout.detail && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-ctp-overlay1">
+                Technical details
+              </summary>
+              <pre className="mt-2 overflow-auto rounded-lg bg-ctp-crust/60 p-3 text-xs text-ctp-overlay1">
+                {layout.detail}
+              </pre>
+            </details>
+          )}
         </div>
       )}
 
