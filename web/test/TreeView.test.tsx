@@ -147,6 +147,46 @@ describe("TreeView", () => {
     expect(cards()).toHaveLength(4);
   });
 
+  it("badges a married couple's partnership link", async () => {
+    const container = await renderTree(coupleWithTwoKids);
+    const badge = container.querySelector('[aria-label*="Married"]');
+    expect(badge).toBeTruthy();
+    expect(badge!.textContent).toContain("💍");
+  });
+
+  it("badges a divorced couple differently from a married one", async () => {
+    const container = await renderTree({
+      ...coupleWithTwoKids,
+      partnerships: [
+        {
+          id: "p1",
+          aId: "dad",
+          bId: "mum",
+          status: "divorced",
+          since: null,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+    expect(container.querySelector('[aria-label*="Divorced"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label*="Married"]')).toBeFalsy();
+  });
+
+  it("marks a couple with no recorded partnership as assumed, not married", async () => {
+    const container = await renderTree({
+      members: [member("dad", "Dad"), member("mum", "Mum"), member("kid", "Kid")],
+      links: [
+        { id: "l1", parentId: "dad", childId: "kid", createdAt: "" },
+        { id: "l2", parentId: "mum", childId: "kid", createdAt: "" },
+      ],
+      partnerships: [],
+    });
+
+    expect(container.querySelector('[aria-label*="Assumed partners"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label*="Married"]')).toBeFalsy();
+  });
+
   it("renders half-siblings from a second relationship", async () => {
     await renderTree({
       members: [

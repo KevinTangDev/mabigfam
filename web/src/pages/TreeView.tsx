@@ -5,6 +5,7 @@ import calcTree from "relatives-tree";
 import type { ExtNode } from "relatives-tree/lib/types";
 import { api } from "../api/client";
 import { buildRelativesTreeNodes } from "../lib/buildRelativesTree";
+import { buildPartnerConnectors, type PartnerConnector } from "../lib/partnerConnectors";
 import FamilyNodeCard from "../components/FamilyNodeCard";
 import { cardClass, inputClass } from "../components/ui";
 import type { FamilyMember, TreeData } from "../types";
@@ -24,6 +25,42 @@ const CARD_GUTTER_Y = 34;
 
 const CARD_WIDTH = CELL_WIDTH - CARD_GUTTER_X * 2;
 const CARD_HEIGHT = CELL_HEIGHT - CARD_GUTTER_Y * 2;
+
+/** A grid-unit coordinate (ExtNode.left/top space) to a pixel offset within
+ *  the tree canvas — the cell-centre counterpart of the card transform above. */
+function cellCenter(units: number, cell: number): number {
+  return units * (cell / 2) + cell / 2;
+}
+
+const PARTNER_BADGE: Record<
+  PartnerConnector["status"],
+  { icon: string; legend: string; tooltip: string; className: string }
+> = {
+  married: {
+    icon: "💍",
+    legend: "Married",
+    tooltip: "Married",
+    className: "border-ctp-pink bg-ctp-pink/15",
+  },
+  partner: {
+    icon: "🤝",
+    legend: "Partner",
+    tooltip: "Partner",
+    className: "border-ctp-blue bg-ctp-blue/15",
+  },
+  divorced: {
+    icon: "💔",
+    legend: "Divorced",
+    tooltip: "Divorced",
+    className: "border-dashed border-ctp-red bg-ctp-red/15",
+  },
+  inferred: {
+    icon: "•",
+    legend: "Assumed",
+    tooltip: "Assumed partners — share a child, no partnership recorded",
+    className: "border-dashed border-ctp-overlay0 bg-ctp-surface0 text-ctp-overlay1",
+  },
+};
 
 export default function TreeView() {
   const { rootId: rootIdParam } = useParams<{ rootId?: string }>();
@@ -90,6 +127,11 @@ export default function TreeView() {
     return data.members.filter((m) => !shown.has(m.id));
   }, [data, layout]);
 
+  const partnerConnectors = useMemo(() => {
+    if (!layout || layout.error) return [];
+    return buildPartnerConnectors(layout.nodes, data?.partnerships ?? []);
+  }, [layout, data]);
+
   if (!data) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
 
   if (data.members.length === 0) {
@@ -122,6 +164,14 @@ export default function TreeView() {
           </select>
         </label>
         <span className="text-xs text-ctp-overlay1">Click anyone to open their profile</span>
+        <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ctp-overlay1">
+          {Object.values(PARTNER_BADGE).map((badge) => (
+            <span key={badge.legend} className="flex items-center gap-1">
+              <span aria-hidden="true">{badge.icon}</span>
+              {badge.legend}
+            </span>
+          ))}
+        </span>
       </div>
 
       {layout?.error && (
@@ -169,30 +219,70 @@ export default function TreeView() {
 
       {!layout?.error && (
         <div className={`${cardClass} max-h-[75vh] overflow-auto p-6`}>
-          <ReactFamilyTree
-            nodes={nodes}
-            rootId={rootId}
-            width={CELL_WIDTH}
-            height={CELL_HEIGHT}
-            className="tree-canvas"
-            renderNode={(node: ExtNode) => (
-              <FamilyNodeCard
-                key={node.id}
-                node={node}
-                member={memberById.get(node.id)}
-                isRoot={node.id === rootId}
-                onSelect={(id) => navigate(`/members/${id}`)}
-                style={{
-                  width: CARD_WIDTH,
-                  height: CARD_HEIGHT,
-                  // Offset by the gutter so the card sits inset within its cell.
-                  transform: `translate(${node.left * (CELL_WIDTH / 2) + CARD_GUTTER_X}px, ${
-                    node.top * (CELL_HEIGHT / 2) + CARD_GUTTER_Y
-                  }px)`,
-                }}
-              />
-            )}
-          />
+          <div className="relative inline-block">
+            <ReactFamilyTree
+              nodes={nodes}
+              rootId={rootId}
+              width={CELL_WIDTH}
+              height={CELL_HEIGHT}
+              className="tree-canvas"
+              renderNode={(node: ExtNode) => (
+                <FamilyNodeCard
+                  key={node.id}
+                  node={node}
+                  member={memberById.get(node.id)}
+                  isRoot={node.id === rootId}
+                  onSelect={(id) => navigate(`/members/${id}`)}
+                  style={{
+                    width: CARD_WIDTH,
+                    height: CARD_HEIGHT,
+                    // Offset by the gutter so the card sits inset within its cell.
+                    transform: `translate(${node.left * (CELL_WIDTH / 2) + CARD_GUTTER_X}px, ${
+                      node.top * (CELL_HEIGHT / 2) + CARD_GUTTER_Y
+                    }px)`,
+                  }}
+                />
+              )}
+            />
+
+            {/*
+              react-family-tree owns the canvas div and draws every connector
+              (ancestry and partnership alike) as an identical grey segment —
+              see index.css. This overlay sits on top of it, placing one badge
+              per rendered partnership at the midpoint between the two cards
+              (right where relatives-tree already put its plain line), so the
+              status is visible instead of implied by adjacency alone.
+            */}
+            <div className="pointer-events-none absolute inset-0">
+              {partnerConnectors.map((connector) => {
+                const badge = PARTNER_BADGE[connector.status];
+                const a = memberById.get(connector.aId)?.name ?? "Unknown";
+                const b = memberById.get(connector.bId)?.name ?? "Unknown";
+                const since = connector.since ? ` since ${connector.since.slice(0, 10)}` : "";
+                const title =
+                  connector.status === "inferred"
+                    ? `${a} & ${b} — ${badge.tooltip}`
+                    : `${a} & ${b} — ${badge.tooltip}${since}`;
+                return (
+                  <span
+                    key={`${connector.aId}-${connector.bId}`}
+                    role="img"
+                    aria-label={title}
+                    title={title}
+                    className={`pointer-events-auto absolute flex h-5 w-5 -translate-x-1/2
+                                -translate-y-1/2 items-center justify-center rounded-full border
+                                text-[11px] leading-none shadow-sm ${badge.className}`}
+                    style={{
+                      left: cellCenter(connector.x, CELL_WIDTH),
+                      top: cellCenter(connector.y, CELL_HEIGHT),
+                    }}
+                  >
+                    {badge.icon}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
