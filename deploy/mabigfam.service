@@ -1,0 +1,56 @@
+# systemd unit for running mabigfam as a background service.
+#
+# Assumes the layout docs/deploy-proxmox.md sets up: the repo cloned to
+# /opt/mabigfam, owned by a dedicated "mabigfam" system user, secrets in
+# /opt/mabigfam/server/.env. Adjust User/WorkingDirectory/paths if yours
+# differs.
+#
+# Install:
+#   sudo cp deploy/mabigfam.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mabigfam
+#
+# Logs: journalctl -u mabigfam -f
+
+[Unit]
+Description=MaBigFam family tree app
+After=network-online.target
+Wants=network-online.target
+
+# If the app keeps failing right after start (e.g. a config mistake),
+# give up after 5 attempts in 60s instead of restart-looping forever.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mabigfam
+Group=mabigfam
+
+# server/src/config.ts loads server/.env relative to the process's working
+# directory (Node's process.loadEnvFile() resolves that way, not relative to
+# the script) — WorkingDirectory has to be the directory .env actually lives
+# in, or the app starts with no secrets and refuses to boot.
+WorkingDirectory=/opt/mabigfam/server
+ExecStart=/usr/bin/node dist/index.js
+
+Restart=on-failure
+RestartSec=5
+
+# --- Optional hardening ---
+# Hasn't been tested against a real systemd/LXC setup (nothing in this repo
+# runs one), so treat it as a starting point: if the service fails to start
+# after installing this unit, `systemctl status mabigfam` and
+# `journalctl -u mabigfam -e` will show whether it's a permissions problem
+# from one of these lines — comment the block out to isolate that before
+# assuming the app itself is broken.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# The app only ever writes to the SQLite database (prisma/) and uploaded
+# photos (server/uploads/) — everything else it can treat as read-only.
+ReadWritePaths=/opt/mabigfam/prisma /opt/mabigfam/server/uploads
+
+[Install]
+WantedBy=multi-user.target

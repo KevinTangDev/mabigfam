@@ -39,7 +39,7 @@ export function issueSession(reply: FastifyReply) {
     path: "/",
     httpOnly: true, // not readable from JS, limits XSS impact
     sameSite: "lax",
-    secure: config.isProduction, // HTTPS-only once deployed
+    secure: config.secureCookies, // see config.ts — HTTPS-only unless COOKIE_SECURE=false
     signed: true, // tamper-proof via SESSION_SECRET
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -71,10 +71,18 @@ export function hasValidSession(request: FastifyRequest): boolean {
  * Global gate. Registered as an onRequest hook so it runs before any route
  * handler — including the static photo routes — and denies by default:
  * anything under /api that isn't explicitly public requires a session.
+ *
+ * Scoped to /api: in production the server also serves the built frontend
+ * (see app.ts), and that must stay reachable without a session — an
+ * anonymous visitor needs to load the login page's own HTML/JS/CSS before
+ * they have anything to authenticate with. Nothing sensitive lives in the
+ * static bundle; every route that actually returns family data is under
+ * /api and stays gated exactly as before.
  */
 export async function authGate(request: FastifyRequest, reply: FastifyReply) {
   const path = request.url.split("?")[0]!;
 
+  if (!path.startsWith("/api/")) return; // static frontend — not gated here
   if (PUBLIC_PATHS.has(path)) return;
   if (path.startsWith(TOKEN_AUTHENTICATED_PREFIX)) return; // route checks the token
   if (hasValidSession(request)) return;

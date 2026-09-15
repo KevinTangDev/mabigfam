@@ -127,6 +127,39 @@ separately with `npm run dev:server` / `npm run dev:web`.
 npm run build
 ```
 
+## Deployment
+
+`npm run build` produces `server/dist` and `web/dist`. Once `web/dist`
+exists, the server serves it itself — one Node process, one port, no
+separate static file server or reverse proxy required. That's deliberate:
+it's what makes a single small VM or container a complete deployment.
+
+```bash
+npm install                 # applies patches/, generates the Prisma client
+npx prisma migrate deploy --schema=prisma/schema.prisma
+npm run build
+cp server/.env.example server/.env   # then edit it — see below
+node server/dist/index.js
+```
+
+Required in `server/.env` beyond the local-dev setup:
+
+- `NODE_ENV=production`
+- **`COOKIE_SECURE`** — if this won't sit behind HTTPS (e.g. a home-LAN-only
+  server), set `COOKIE_SECURE=false` explicitly. Without it, `NODE_ENV=production`
+  makes the session cookie `Secure`-only, which browsers enforce strictly: a
+  `Secure` cookie sent over plain HTTP is silently **not stored at all**.
+  Login appears to succeed (the server responds 200) but every request after
+  that looks signed-out, because the browser just never kept the cookie.
+  `http://localhost` is exempted by browsers from this (treated as a secure
+  context), which is exactly why this can pass local testing and then fail
+  once reached by a LAN IP or real hostname — test against the actual address
+  the family will use, not `localhost`, before trusting it works.
+
+A step-by-step guide for a Proxmox LXC container specifically is in
+[`docs/deploy-proxmox.md`](docs/deploy-proxmox.md), including a systemd
+service file and an update/backup workflow.
+
 ## Tests
 
 ```bash
@@ -172,9 +205,15 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
 - All `/api` routes are denied by default; only `/api/health`,
   `/api/auth/login`, `/api/auth/session` and the token-authenticated calendar
   feed are reachable without a session. Photos and exports are gated —
-  they're PII like everything else.
+  they're PII like everything else. The gate only covers `/api` — in
+  production the server also serves the built frontend (see Deployment
+  above), and that has to stay reachable without a session or the login
+  page's own HTML/JS/CSS couldn't load. Nothing sensitive lives in the
+  static bundle; every route that returns family data is under `/api`.
 - The session cookie is HMAC-signed (`SESSION_SECRET`), `httpOnly`,
-  `sameSite=lax`, and `secure` once `NODE_ENV=production`.
+  `sameSite=lax`, and `secure` by default once `NODE_ENV=production` —
+  overridable with `COOKIE_SECURE`, see Deployment above for why a
+  plain-HTTP LAN deployment needs `COOKIE_SECURE=false` explicitly.
 - Uploads are validated by **magic bytes**, not the browser-supplied
   `Content-Type`, so a text file renamed `.jpg` is rejected. Stored filenames
   are server-generated UUIDs, never derived from user input.

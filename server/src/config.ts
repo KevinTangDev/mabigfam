@@ -36,6 +36,31 @@ export const config = {
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   isProduction: process.env.NODE_ENV === "production",
 
+  /**
+   * Whether the session cookie is sent with the Secure flag, which browsers
+   * enforce strictly: a Secure cookie set over plain HTTP is silently
+   * *not stored at all* — login appears to succeed (the server responds
+   * 200) but the browser just never keeps the cookie, so every subsequent
+   * request looks signed-out. `http://localhost` is a browser-specified
+   * exception (treated as a secure context), which is exactly why this can
+   * pass local testing and then silently fail once reached by LAN IP or a
+   * real hostname over HTTP.
+   *
+   * Defaults to requiring HTTPS whenever NODE_ENV=production, which is
+   * correct once this sits behind a TLS-terminating reverse proxy. Set
+   * COOKIE_SECURE=false to explicitly opt out for a production deployment
+   * that intentionally serves plain HTTP — e.g. a home-LAN-only server. That
+   * means the session cookie travels in cleartext, which is a reasonable
+   * trade-off on a private trusted network but not one to make silently, so
+   * it's a separate opt-in rather than being implied by any other setting.
+   */
+  secureCookies:
+    process.env.COOKIE_SECURE === "false"
+      ? false
+      : process.env.COOKIE_SECURE === "true"
+        ? true
+        : process.env.NODE_ENV === "production",
+
   /** Shared passphrase the whole family uses to sign in. */
   familyPassword: required("FAMILY_PASSWORD", 8),
   /** HMAC key used to sign the session cookie. */
@@ -50,6 +75,15 @@ export const config = {
 
   /** Max accepted photo upload size, in bytes. */
   maxPhotoBytes: Number(process.env.MAX_PHOTO_BYTES ?? 8 * 1024 * 1024),
+
+  /**
+   * The built frontend (web/dist). When this directory exists, the server
+   * serves it itself — one process, one port, nothing else to run — which is
+   * the deployment shape for a single-container/single-VM setup. In local
+   * dev the frontend is instead served by Vite's own dev server (for hot
+   * reload), so this only matters once `npm run build` has produced it.
+   */
+  webDistDir: path.resolve(process.env.WEB_DIST_DIR ?? path.join(process.cwd(), "..", "web", "dist")),
 
   /**
    * Secret embedded in the calendar feed URL.

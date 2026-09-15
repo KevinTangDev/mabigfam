@@ -1,0 +1,5 @@
+# Shell scripts must stay LF regardless of the committer's platform — a
+# stray \r in the shebang line breaks the interpreter lookup on Linux
+# ("/usr/bin/env: 'bash\r': No such file or directory"), and this repo is
+# edited on Windows but deployed to Linux (see docs/deploy-proxmox.md).
+*.sh text eol=lf

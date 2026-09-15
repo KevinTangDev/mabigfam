@@ -5,6 +5,7 @@ import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { config } from "./config.js";
 import { authGate } from "./auth.js";
 import { authRoutes } from "./routes/auth.js";
@@ -85,5 +86,42 @@ export async function buildApp({ logger = true } = {}): Promise<FastifyInstance>
   await app.register(eventRoutes);
   await app.register(calendarRoutes);
 
+  await registerFrontend(app);
+
   return app;
+}
+
+/**
+ * Serves the built frontend (web/dist) when present, so a single process on
+ * a single port is a complete deployment — no separate static file server or
+ * reverse proxy required. Absent in local dev, where Vite's own dev server
+ * serves the frontend instead (see web/vite.config.ts's proxy to this API).
+ */
+async function registerFrontend(app: FastifyInstance) {
+  const hasFrontend = await fs
+    .access(path.join(config.webDistDir, "index.html"))
+    .then(() => true)
+    .catch(() => false);
+
+  if (!hasFrontend) return;
+
+  await app.register(fastifyStatic, {
+    root: config.webDistDir,
+    prefix: "/",
+    // The photo registration above already added reply.sendFile(); adding it
+    // again here would throw "decorator has already been added".
+    decorateReply: false,
+  });
+
+  // React Router does client-side routing (e.g. /tree/:id, /members/:id)
+  // with no matching file on disk, so every one of those needs index.html
+  // rather than a 404 — the SPA then reads the URL itself and renders the
+  // right page. An unmatched /api/* route is a real 404, not a client route,
+  // so it keeps the normal JSON response instead.
+  app.setNotFoundHandler((request, reply) => {
+    if (request.method !== "GET" || request.url.startsWith("/api/")) {
+      return reply.status(404).send({ error: "Not found" });
+    }
+    return reply.sendFile("index.html", config.webDistDir);
+  });
 }
