@@ -3,3 +3,9 @@
 # ("/usr/bin/env: 'bash\r': No such file or directory"), and this repo is
 # edited on Windows but deployed to Linux (see docs/deploy-proxmox.md).
 *.sh text eol=lf
+
+# YAML is more tolerant of CRLF than a shebang line, but GitHub Actions
+# workflows are executed on Linux runners — keep them LF for the same
+# cross-platform reason, not because a real failure was observed.
+*.yml text eol=lf
+*.yaml text eol=lf

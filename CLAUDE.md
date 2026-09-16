@@ -56,6 +56,14 @@ npm run prisma:migrate    # create a new migration + apply it (dev)
 npm run prisma:studio     # browse the DB
 ```
 
+`npm install`/`npm ci` does **not** generate the Prisma client against this
+repo's schema — verified against a genuinely fresh clone, `@prisma/client`
+installs as an empty package skeleton (no `FamilyMember` type, no query
+engine binary) until `prisma generate` runs explicitly. Typecheck/build
+will fail with missing-type errors that look unrelated to Prisma if this
+step is skipped after a fresh install — see `.github/workflows/ci.yml` for
+where it has to happen (before typecheck, right after install).
+
 `prisma/schema.prisma` hardcodes its SQLite `url` (`file:./mabigfam.db`)
 rather than reading `env("DATABASE_URL")` — Prisma 7 dropped support for the
 `url = "..."` form entirely, which is why this repo is pinned to Prisma 6.x

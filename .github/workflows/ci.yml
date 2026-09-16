@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel a superseded run on the same branch/PR rather than let it finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      # Runs patches/ via postinstall automatically. Does NOT generate the
+      # Prisma client against this repo's schema — verified locally that a
+      # bare `npm ci` leaves @prisma/client as an empty package skeleton
+      # (no FamilyMember type, no query engine binary) until `prisma
+      # generate` is run explicitly, which the next step does.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # server/test/globalSetup.ts provisions its own throwaway SQLite
+      # database in a temp directory — no external DB service needed here.
+      - name: Test
+        run: npm test
+
+      # Typecheck alone (tsc -b --noEmit for web) doesn't exercise Vite's
+      # actual bundling, so this catches build-only failures typecheck
+      # would miss.
+      - name: Build
+        run: npm run build

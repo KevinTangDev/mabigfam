@@ -1,5 +1,7 @@
 # mabigfam
 
+[![CI](https://github.com/KevinTangDev/mabigfam/actions/workflows/ci.yml/badge.svg)](https://github.com/KevinTangDev/mabigfam/actions/workflows/ci.yml)
+
 A small family-tree app: a Fastify + TypeScript + Prisma API backed by
 SQLite, and a React + TypeScript frontend with a sortable/filterable table
 view and a genealogy tree view (built on
@@ -180,6 +182,22 @@ in both configs' `recommended` sets is on, including the rules that already
 did their job during setup — `web`'s `exhaustive-deps` caught a real stale
 closure in `MemberDetail.tsx`, fixed by wrapping its refetch helper in
 `useCallback`.
+
+## CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm run
+typecheck`, `lint`, `test` and `build` on every push to `master` and every
+PR — the same commands as `npm run check` above, as separate steps so a
+failure names the exact stage. No external services needed: the test suite
+provisions its own throwaway SQLite database (see `globalSetup.ts` under
+Tests below).
+
+One step is easy to assume is unnecessary and isn't: a bare `npm ci` does
+**not** generate the Prisma client against this repo's schema — verified
+locally against a genuinely fresh clone, `@prisma/client` installs as an
+empty package skeleton (no `FamilyMember` type, no query engine binary)
+until `npx prisma generate` runs explicitly, which is its own CI step
+before typecheck.
 
 ## Tests
 
