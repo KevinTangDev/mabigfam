@@ -119,4 +119,19 @@ export const config = {
   calendarFeedToken:
     process.env.CALENDAR_FEED_TOKEN ??
     crypto.createHmac("sha256", required("SESSION_SECRET", 32)).update("calendar-feed").digest("hex").slice(0, 32),
+
+  /**
+   * Login attempts are rate-limited per IP (see routes/auth.ts) to blunt
+   * online guessing against the one shared family passphrase, which
+   * otherwise has no lockout or backoff at all. Overridable because the
+   * test suite's own login() helper is called in nearly every test file's
+   * beforeEach against one shared app instance — globalSetup.ts raises this
+   * far above what the real suite ever does in a minute so that ambient
+   * usage never trips it, and the dedicated rate-limit test builds its own
+   * app with a small value instead (see loginRateLimit.test.ts).
+   */
+  loginRateLimit: {
+    max: Number(process.env.LOGIN_RATE_LIMIT_MAX ?? 5),
+    timeWindow: process.env.LOGIN_RATE_LIMIT_WINDOW ?? "1 minute",
+  },
 };

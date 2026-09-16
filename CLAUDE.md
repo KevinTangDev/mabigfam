@@ -212,6 +212,36 @@ once the app is reached by a real hostname/LAN IP rather than `localhost`
 deployment (e.g. LAN-only, see `docs/deploy-proxmox.md`) must set
 `COOKIE_SECURE=false` explicitly.
 
+### Login rate limiting, and why the test suite doesn't trip it
+
+`POST /api/auth/login` opts into `@fastify/rate-limit` per-route (`config: {
+rateLimit: config.loginRateLimit }` in `routes/auth.ts`) — the plugin itself
+is registered with `global: false` in `app.ts`, so nothing else is limited.
+`config.loginRateLimit` (`LOGIN_RATE_LIMIT_MAX`/`LOGIN_RATE_LIMIT_WINDOW`,
+defaulting to 5/minute) is overridable because `server/test/helpers.ts`'s
+`login()` is called from nearly every test file's `beforeEach` against one
+shared app instance — hundreds of logins from the same `inject()` address
+well within a minute. `globalSetup.ts` raises `LOGIN_RATE_LIMIT_MAX` far
+above what the real suite ever does so that ambient usage never trips it;
+`server/test/loginRateLimit.test.ts` builds its own app with a small value
+instead (same fresh-module-registry isolation as `cookieSecurity.test.ts`).
+
+### Backup (`routes/backup.ts`)
+
+`GET /api/backup` streams a zip of the database plus every photo file — a
+self-service alternative to the SSH/Proxmox-snapshot backup in
+`docs/deploy-proxmox.md`. It runs `VACUUM INTO` (via
+`prisma.$executeRaw`) to get one consistent snapshot file rather than
+copying the live `.db` file directly, which could otherwise race a
+concurrent writer and capture a torn file. `archiver` 8.x changed its API
+from a callable factory to named classes (`import { ZipArchive } from
+"archiver"`, not `import archiver from "archiver"` — the latter fails to
+compile, `@types/archiver`@8 matches the new shape); `reply.send(archive)`
+starts streaming before `archive.finalize()` is awaited, which is the
+pattern that lets the handler still append entries and clean up the temp
+snapshot file afterward. Deliberately not filtered by `ACTIVE_MEMBER`: this
+is a disaster-recovery snapshot, so it includes trashed members too.
+
 ### Module resolution in `server/`
 
 `tsconfig.json` uses `NodeNext`/`NodeNext` — relative imports need an
@@ -232,7 +262,9 @@ required by the module system, not a typo, throughout `server/src`.
   `vi.resetModules()` + a dynamic `import("../src/app.js")` to force a fresh
   module graph — a plain env var change after the fact won't affect an
   already-imported `config`.
-- **Web component tests** (`web/test/TreeView.test.tsx`, `TrashView.test.tsx`) don't use
+- **Web component tests** (one file per page under `web/test/`: `TreeView`,
+  `TrashView`, `TableView`, `MemberDetail`, `CalendarView`, `GameView`,
+  `LoginScreen`) don't use
   `@testing-library/react` — in this npm-workspaces layout it hoists to the
   root, where `react` isn't resolvable from, so it can't load. They use the
   small `web/test/renderHelper.tsx` (built directly on `react-dom/client` +

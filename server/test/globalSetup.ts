@@ -58,6 +58,14 @@ export default function setup() {
   process.env.DATABASE_URL = `file:${path.join(prismaDir, "test.db")}`;
   process.env.UPLOAD_DIR = path.join(dir, "uploads");
 
+  // The ambient shared app (helpers.ts's getApp()) is logged into by nearly
+  // every test file's beforeEach — hundreds of logins from the same
+  // "127.0.0.1" inject() address inside whatever real time the whole suite
+  // takes to run, easily well under a minute. Without this, the login rate
+  // limit (see config.ts) would start 429ing ordinary test setup long before
+  // any test actually exercises it.
+  process.env.LOGIN_RATE_LIMIT_MAX = "1000000";
+
   return () => {
     fs.rmSync(dir, { recursive: true, force: true });
   };

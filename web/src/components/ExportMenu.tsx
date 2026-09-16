@@ -21,6 +21,12 @@ const OPTIONS = [
     path: "/export/vcard?photos=false",
     file: "mabigfam.vcf",
   },
+  {
+    label: "Full backup (.zip)",
+    hint: "Database + all photos, for safekeeping",
+    path: "/backup",
+    file: "mabigfam-backup.zip",
+  },
 ];
 
 export default function ExportMenu() {

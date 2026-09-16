@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +18,7 @@ import { photoRoutes } from "./routes/photos.js";
 import { exportRoutes } from "./routes/exports.js";
 import { eventRoutes } from "./routes/events.js";
 import { calendarRoutes } from "./routes/calendar.js";
+import { backupRoutes } from "./routes/backup.js";
 
 /**
  * Builds the fully wired app without listening, so tests can drive it through
@@ -32,6 +34,11 @@ export async function buildApp({ logger = true } = {}): Promise<FastifyInstance>
 
   await app.register(cookie, { secret: config.sessionSecret });
   await app.register(multipart, { limits: { fileSize: config.maxPhotoBytes, files: 1 } });
+
+  // global: false — this only guards individual routes that opt in via
+  // `config: { rateLimit: ... }` (currently just login; see routes/auth.ts),
+  // not every request.
+  await app.register(rateLimit, { global: false });
 
   /*
    * Treat an empty body as "no body" instead of a parse error.
@@ -85,6 +92,7 @@ export async function buildApp({ logger = true } = {}): Promise<FastifyInstance>
   await app.register(exportRoutes);
   await app.register(eventRoutes);
   await app.register(calendarRoutes);
+  await app.register(backupRoutes);
 
   await registerFrontend(app);
 

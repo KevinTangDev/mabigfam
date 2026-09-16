@@ -74,6 +74,21 @@ From the table view's **Export** menu:
   what iOS and Android expect for a bulk import. Photos are embedded, with a
   no-photos variant when size matters. A single person can also be saved from
   their own profile page.
+- **Full backup (`.zip`)** — see below.
+
+## Backup
+
+The same **Export** menu has a **Full backup (.zip)** option: a snapshot of
+the whole app (database + every photo file) as one download, self-service for
+anyone who wants a copy without shell access to the server. This is a
+disaster-recovery snapshot, not a user export — unlike the CSV/vCard exports
+above, it includes trashed members too, so restoring from it puts things back
+exactly as they were.
+
+It's an alternative to, not a replacement for, the SSH/Proxmox-snapshot
+backup already described in [`docs/deploy-proxmox.md`](docs/deploy-proxmox.md)
+— that one is better for an unattended schedule; this one is better for "I
+just want a copy right now."
 
 ## Calendar
 
@@ -228,8 +243,10 @@ watches.
 - **`web/test`** — unit tests for the relatives-tree graph builder (siblings,
   half-siblings, explicit vs inferred partners) and the calendar date helpers
   (end-exclusive ranges, birthday rollover, leap days); jsdom render tests
-  that mount the real Tree view over stubbed API data; and a guard that fails
-  if a second copy of React ever gets installed (see below).
+  that mount every page (Table, Member detail, Tree, Trash, Calendar, Game,
+  Login) over stubbed API data, using `web/test/renderHelper.tsx` rather than
+  `@testing-library/react` (see below for why); and a guard that fails if a
+  second copy of React ever gets installed (see below).
 
 ### The duplicate-React trap
 
@@ -269,6 +286,10 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
 - Uploads are validated by **magic bytes**, not the browser-supplied
   `Content-Type`, so a text file renamed `.jpg` is rejected. Stored filenames
   are server-generated UUIDs, never derived from user input.
+- `POST /api/auth/login` is rate-limited per IP (`LOGIN_RATE_LIMIT_MAX`,
+  default 5 per `LOGIN_RATE_LIMIT_WINDOW`, default 1 minute) on top of the
+  timing-safe passphrase compare — the one shared family password otherwise
+  has no lockout or backoff at all.
 - Before putting this on the public internet: serve it over HTTPS, set
   `NODE_ENV=production`, and note that auth is a single shared passphrase —
   there are no per-member accounts, so everyone who signs in can edit and
