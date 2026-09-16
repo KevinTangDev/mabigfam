@@ -122,6 +122,46 @@ ones — `aId` is always the lexicographically smaller id (enforced in
 `routes/partnerships.ts`'s `canonicalPair()`), which is what lets the
 `@@unique([aId, bId])` constraint catch a duplicate added in either order.
 
+### Soft delete: `ACTIVE_MEMBER` and the Trash lifecycle
+
+`FamilyMember.deletedAt` (nullable) is the only thing a normal delete
+touches — `ParentChild`/`Partnership` rows and the photo file are left
+alone, which is what lets Restore bring a member back with every
+relationship intact. `ACTIVE_MEMBER` (`{ deletedAt: null }`, exported from
+`server/src/db.ts`) is spread into the `where` of essentially every route
+that resolves members or their relations — list, get-by-id, tree, exports,
+the calendar feed's birthdays, and the `include` filters inside
+`/api/members/:id/relations` (a trashed parent/child/partner just doesn't
+appear in the array, rather than the route needing to know about trash at
+all). New routes/queries touching `FamilyMember` need to spread this in
+too, or a trashed member leaks back into view.
+
+Three endpoints past the normal CRUD: `GET /api/members/trash` (list),
+`POST /api/members/:id/restore` (only works on an *already-trashed* id —
+404 otherwise), and `DELETE /api/members/:id/purge` — the real, irreversible
+delete, gated to only work on an already-trashed id (you can't purge an
+active member directly; Delete-then-Purge is the deliberate two-step). Purge
+is the one place that does a real Prisma delete (so the schema's
+`onDelete: Cascade` actually fires) and the one place that deletes the photo
+file.
+
+### Photo pipeline: resize-and-normalize on upload
+
+`server/src/storage.ts`'s `savePhoto()` validates by magic bytes (not the
+browser-supplied Content-Type), then unconditionally pipes the buffer
+through `sharp`: `.rotate()` (auto-orients from EXIF and bakes it into the
+pixels — required, not cosmetic, since sharp doesn't carry EXIF through the
+re-encode, so skipping this ships sideways portrait phone photos), resize to
+fit within `config.photoMaxDimension`, re-encode as JPEG at
+`config.photoQuality`. Every stored photo is JPEG regardless of upload
+format — `readPhoto()`'s mime sniff and the vCard exporter's `TYPE` param
+both rely on that.
+
+HEIC is still rejected (see README) — confirmed via
+`sharp.format.heif.input.fileSuffix` (`[".avif"]` only) that `sharp`'s
+prebuilt binary scopes HEIF input to AVIF, not real HEVC-coded iPhone HEIC
+photos; adding `sharp` for resizing doesn't change this.
+
 ### Frontend tree rendering pipeline
 
 This is the most cross-file flow in the app. `GET /api/tree` returns the
@@ -192,7 +232,7 @@ required by the module system, not a typo, throughout `server/src`.
   `vi.resetModules()` + a dynamic `import("../src/app.js")` to force a fresh
   module graph — a plain env var change after the fact won't affect an
   already-imported `config`.
-- **Web component tests** (`web/test/TreeView.test.tsx`) don't use
+- **Web component tests** (`web/test/TreeView.test.tsx`, `TrashView.test.tsx`) don't use
   `@testing-library/react` — in this npm-workspaces layout it hoists to the
   root, where `react` isn't resolvable from, so it can't load. They use the
   small `web/test/renderHelper.tsx` (built directly on `react-dom/client` +

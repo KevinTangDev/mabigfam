@@ -9,6 +9,8 @@ export interface FamilyMember {
   photoPath: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Set once a member is moved to the Trash; null means active. */
+  deletedAt: string | null;
 }
 
 export type FamilyMemberInput = {

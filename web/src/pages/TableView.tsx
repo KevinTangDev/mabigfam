@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import Avatar from "../components/Avatar";
@@ -69,7 +69,10 @@ export default function TableView() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete ${name}? This also removes their parent/child links.`)) return;
+    // A soft delete — moves them to the Trash rather than losing anything,
+    // so this confirm is a light misclick guard, not a warning about
+    // irreversible loss.
+    if (!confirm(`Move ${name} to Trash? You can restore them anytime.`)) return;
     await api.deleteMember(id);
     load();
   }
@@ -87,6 +90,13 @@ export default function TableView() {
           {filtered.length} {filtered.length === 1 ? "member" : "members"}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <Link
+            to="/trash"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-ctp-subtext0
+                       transition hover:bg-ctp-surface0 hover:text-ctp-text"
+          >
+            Trash
+          </Link>
           <ExportMenu />
           <Button variant="primary" onClick={() => setShowCreate(true)}>
             + Add member

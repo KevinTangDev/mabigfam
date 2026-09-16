@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { prisma } from "../db.js";
+import { ACTIVE_MEMBER, prisma } from "../db.js";
 
 export const PARTNERSHIP_STATUSES = ["married", "partner", "divorced"] as const;
 
@@ -26,7 +26,9 @@ export function canonicalPair(first: string, second: string): [string, string] {
 
 export async function partnershipRoutes(app: FastifyInstance) {
   app.get("/api/partnerships", async (_request, reply) => {
-    const partnerships = await prisma.partnership.findMany();
+    const partnerships = await prisma.partnership.findMany({
+      where: { a: ACTIVE_MEMBER, b: ACTIVE_MEMBER },
+    });
     return reply.send(partnerships);
   });
 
@@ -44,7 +46,9 @@ export async function partnershipRoutes(app: FastifyInstance) {
 
     const [aId, bId] = canonicalPair(first, second);
 
-    const found = await prisma.familyMember.findMany({ where: { id: { in: [aId, bId] } } });
+    const found = await prisma.familyMember.findMany({
+      where: { id: { in: [aId, bId] }, ...ACTIVE_MEMBER },
+    });
     if (found.length !== 2) {
       return reply.status(404).send({ error: "One or both members not found" });
     }

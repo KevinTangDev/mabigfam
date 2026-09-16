@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
-import { prisma } from "../db.js";
+import { ACTIVE_MEMBER, prisma } from "../db.js";
 import { readPhoto } from "../storage.js";
 import { membersToCsv } from "../export/csv.js";
 import { membersToVCards, memberToVCard, mimeToVCardType } from "../export/vcard.js";
@@ -43,8 +43,8 @@ export async function exportRoutes(app: FastifyInstance) {
   // Spreadsheet-friendly export, with parent/child names resolved.
   app.get("/api/export/csv", async (_request, reply) => {
     const [members, links] = await Promise.all([
-      prisma.familyMember.findMany({ orderBy: { name: "asc" } }),
-      prisma.parentChild.findMany(),
+      prisma.familyMember.findMany({ where: ACTIVE_MEMBER, orderBy: { name: "asc" } }),
+      prisma.parentChild.findMany({ where: { parent: ACTIVE_MEMBER, child: ACTIVE_MEMBER } }),
     ]);
 
     const nameById = new Map(members.map((m) => [m.id, m.name]));
@@ -75,7 +75,10 @@ export async function exportRoutes(app: FastifyInstance) {
       .parse(request.query);
     const includePhotos = query.photos !== "false";
 
-    const members = await prisma.familyMember.findMany({ orderBy: { name: "asc" } });
+    const members = await prisma.familyMember.findMany({
+      where: ACTIVE_MEMBER,
+      orderBy: { name: "asc" },
+    });
     const photos = includePhotos ? await collectPhotos(members) : new Map<string, PhotoData>();
 
     const vcf = membersToVCards(members, photos);
@@ -85,7 +88,9 @@ export async function exportRoutes(app: FastifyInstance) {
 
   // Single contact, for sharing one person.
   app.get<{ Params: { id: string } }>("/api/members/:id/vcard", async (request, reply) => {
-    const member = await prisma.familyMember.findUnique({ where: { id: request.params.id } });
+    const member = await prisma.familyMember.findFirst({
+      where: { id: request.params.id, ...ACTIVE_MEMBER },
+    });
     if (!member) {
       return reply.status(404).send({ error: "Family member not found" });
     }

@@ -122,7 +122,8 @@ export default function MemberDetail() {
 
   async function handleDeleteMember() {
     if (!id || !member) return;
-    if (!confirm(`Delete ${member.name}? This also removes their relationships.`)) return;
+    // A soft delete — moves them to the Trash rather than losing anything.
+    if (!confirm(`Move ${member.name} to Trash? You can restore them anytime.`)) return;
 
     try {
       await api.deleteMember(id);

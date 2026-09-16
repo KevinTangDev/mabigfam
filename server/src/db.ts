@@ -14,3 +14,12 @@ const overrideUrl = process.env.DATABASE_URL;
 export const prisma = overrideUrl
   ? new PrismaClient({ datasourceUrl: overrideUrl })
   : new PrismaClient();
+
+/**
+ * The one definition of "not soft-deleted" — spread into a `where` clause
+ * anywhere a route must only see active members (which is almost
+ * everywhere: listing, resolving relations, exports, the calendar feed).
+ * Centralized so every route agrees on what "active" means rather than each
+ * hand-rolling `deletedAt: null` and risking one being missed.
+ */
+export const ACTIVE_MEMBER = { deletedAt: null } as const;

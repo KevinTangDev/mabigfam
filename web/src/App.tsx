@@ -4,6 +4,7 @@ import MemberDetail from "./pages/MemberDetail";
 import TreeView from "./pages/TreeView";
 import CalendarView from "./pages/CalendarView";
 import GameView from "./pages/GameView";
+import TrashView from "./pages/TrashView";
 import LoginScreen from "./pages/LoginScreen";
 import { useAuth } from "./auth/AuthContext";
 import { useTheme } from "./theme/ThemeProvider";
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/tree/:rootId" element={<TreeView />} />
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/game" element={<GameView />} />
+            <Route path="/trash" element={<TrashView />} />
           </Routes>
         </ErrorBoundary>
       </main>

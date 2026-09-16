@@ -1,20 +1,23 @@
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../db.js";
+import { ACTIVE_MEMBER, prisma } from "../db.js";
 
 export async function treeRoutes(app: FastifyInstance) {
-  // A single member with their parents, children and partners resolved.
+  // A single active member with their active parents, children and partners
+  // resolved. A trashed relative simply doesn't appear — restoring them
+  // brings the link back into view automatically, since the underlying
+  // ParentChild/Partnership rows were never touched.
   app.get<{ Params: { id: string } }>("/api/members/:id/relations", async (request, reply) => {
     const id = request.params.id;
 
-    const member = await prisma.familyMember.findUnique({
-      where: { id },
+    const member = await prisma.familyMember.findFirst({
+      where: { id, ...ACTIVE_MEMBER },
       include: {
-        parentLinks: { include: { parent: true } }, // links where this member is the child
-        childLinks: { include: { child: true } }, // links where this member is the parent
+        parentLinks: { where: { parent: ACTIVE_MEMBER }, include: { parent: true } },
+        childLinks: { where: { child: ACTIVE_MEMBER }, include: { child: true } },
         // A partnership stores each pair once, so the member may be on either
         // side and both directions have to be read.
-        partnershipsA: { include: { b: true } },
-        partnershipsB: { include: { a: true } },
+        partnershipsA: { where: { b: ACTIVE_MEMBER }, include: { b: true } },
+        partnershipsB: { where: { a: ACTIVE_MEMBER }, include: { a: true } },
       },
     });
 
@@ -47,12 +50,12 @@ export async function treeRoutes(app: FastifyInstance) {
     });
   });
 
-  // Everything needed to render the whole tree client-side.
+  // Everything needed to render the whole tree client-side — active members only.
   app.get("/api/tree", async (_request, reply) => {
     const [members, links, partnerships] = await Promise.all([
-      prisma.familyMember.findMany({ orderBy: { name: "asc" } }),
-      prisma.parentChild.findMany(),
-      prisma.partnership.findMany(),
+      prisma.familyMember.findMany({ where: ACTIVE_MEMBER, orderBy: { name: "asc" } }),
+      prisma.parentChild.findMany({ where: { parent: ACTIVE_MEMBER, child: ACTIVE_MEMBER } }),
+      prisma.partnership.findMany({ where: { a: ACTIVE_MEMBER, b: ACTIVE_MEMBER } }),
     ]);
 
     return reply.send({ members, links, partnerships });

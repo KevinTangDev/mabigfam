@@ -51,6 +51,19 @@ Against the original brief, these are still to come:
 
 Everything from the original brief is now built.
 
+## Trash
+
+Deleting a member from the table or their profile is a **soft delete** —
+they move to Trash (linked from the table toolbar), not gone. Restore
+brings them back with every relationship intact (parent/child links,
+partnerships, photo), since none of that is actually touched by a delete;
+only permanently deleting *from Trash* is the real, irreversible removal,
+and that's a separate confirmation. A trashed member simply disappears from
+every list, the tree, exports and the calendar feed — `ACTIVE_MEMBER` in
+[`server/src/db.ts`](server/src/db.ts) is the one shared filter every route
+applies, rather than each hand-rolling `deletedAt: null` and risking one
+being missed.
+
 ## Exports
 
 From the table view's **Export** menu:
@@ -268,10 +281,19 @@ Prisma CLI would otherwise ignore an override and migrate the real file.
   ephemeral filesystem will lose them on restart — swap the three functions
   in [`server/src/storage.ts`](server/src/storage.ts) for S3/R2 and nothing
   else needs to change.
-- HEIC (the default iPhone photo format) isn't accepted, since decoding it
-  needs a native image library. Uploading from iOS normally transcodes to
-  JPEG automatically; a `.heic` file from a desktop gets a message explaining
-  how to convert it.
+- Every accepted photo is resized to fit within `PHOTO_MAX_DIMENSION`
+  (default 2000px on the longest side — generous headroom; nothing in this
+  app displays a photo anywhere near that large) and re-encoded as JPEG at
+  `PHOTO_QUALITY` (default 82) before being stored, via
+  [`sharp`](https://sharp.pixelplumbing.com). Every stored photo is JPEG
+  regardless of the upload's original format.
+- HEIC (the default iPhone photo format) still isn't accepted — decoding it
+  needs the HEVC codec, which `sharp`'s prebuilt binary deliberately excludes
+  for licensing reasons (its HEIF support is scoped to AVIF only; confirmed
+  via `sharp.format.heif.input.fileSuffix`, not assumed). Adding `sharp` for
+  resizing doesn't change this. Uploading straight from iOS normally
+  transcodes to JPEG automatically; a `.heic` file from a desktop gets a
+  message explaining how to convert it.
 - `FamilyMember` has no `gender` field, which relatives-tree uses only for
   its own styling — irrelevant here since the node cards are custom.
 - **The tree draws only the selected person's own connected family** — the

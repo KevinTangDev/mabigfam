@@ -19,6 +19,13 @@ model FamilyMember {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  /// Soft-delete marker. Null means active. A "deleted" member keeps its row
+  /// (and its ParentChild/Partnership links, and its photo file) so Restore
+  /// can bring everything back exactly as it was — only Purge does a real
+  /// delete. Every route resolving members/relations for normal use filters
+  /// this to null; see ACTIVE_MEMBER in db.ts.
+  deletedAt DateTime?
+
   // Rows where this member is the parent
   childLinks  ParentChild[] @relation("ParentRelation")
   // Rows where this member is the child
@@ -29,6 +36,7 @@ model FamilyMember {
   partnershipsA Partnership[] @relation("PartnerA")
   partnershipsB Partnership[] @relation("PartnerB")
 
+  @@index([deletedAt])
   @@map("family_members")
 }
 

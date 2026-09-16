@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { prisma } from "../db.js";
+import { ACTIVE_MEMBER, prisma } from "../db.js";
 
 const linkInput = z.object({
   parentId: z.string().min(1),
@@ -8,13 +8,15 @@ const linkInput = z.object({
 });
 
 export async function parentChildRoutes(app: FastifyInstance) {
-  // List all parent/child links (handy for building the full tree client-side).
+  // Links between two active members (handy for building the full tree client-side).
   app.get("/api/links", async (_request, reply) => {
-    const links = await prisma.parentChild.findMany();
+    const links = await prisma.parentChild.findMany({
+      where: { parent: ACTIVE_MEMBER, child: ACTIVE_MEMBER },
+    });
     return reply.send(links);
   });
 
-  // Create a parent -> child link.
+  // Create a parent -> child link between two active members.
   app.post("/api/links", async (request, reply) => {
     const parsed = linkInput.safeParse(request.body);
     if (!parsed.success) {
@@ -28,8 +30,8 @@ export async function parentChildRoutes(app: FastifyInstance) {
     }
 
     const [parent, child] = await Promise.all([
-      prisma.familyMember.findUnique({ where: { id: parentId } }),
-      prisma.familyMember.findUnique({ where: { id: childId } }),
+      prisma.familyMember.findFirst({ where: { id: parentId, ...ACTIVE_MEMBER } }),
+      prisma.familyMember.findFirst({ where: { id: childId, ...ACTIVE_MEMBER } }),
     ]);
 
     if (!parent || !child) {

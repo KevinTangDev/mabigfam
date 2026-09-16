@@ -134,7 +134,16 @@ export const api = {
   updateMember: (id: string, data: Partial<FamilyMemberInput>) =>
     request<FamilyMember>(`/members/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
+  // Moves a member to the Trash — recoverable via restoreMember, not an
+  // immediate permanent loss. See purgeMember for the real, irreversible one.
   deleteMember: (id: string) => request<void>(`/members/${id}`, { method: "DELETE" }),
+
+  // --- trash ---
+  listTrash: () => request<FamilyMember[]>("/members/trash"),
+
+  restoreMember: (id: string) => request<FamilyMember>(`/members/${id}/restore`, { method: "POST" }),
+
+  purgeMember: (id: string) => request<void>(`/members/${id}/purge`, { method: "DELETE" }),
 
   // --- photos ---
   uploadPhoto: (id: string, file: File) => {

@@ -73,8 +73,27 @@ export const config = {
    */
   uploadDir: path.resolve(process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads")),
 
-  /** Max accepted photo upload size, in bytes. */
+  /**
+   * Max ACCEPTED upload size, in bytes — rejected outright above this, before
+   * any resizing happens. A storage-abuse/DoS guard on the raw upload, not
+   * the size photos end up stored at (see photoMaxDimension/photoQuality
+   * below for that — a stored photo is typically far smaller than this).
+   */
   maxPhotoBytes: Number(process.env.MAX_PHOTO_BYTES ?? 8 * 1024 * 1024),
+
+  /**
+   * Every accepted photo (JPEG/PNG/WebP) is resized to fit within this many
+   * pixels on the longest side and re-encoded as JPEG before being written to
+   * disk — see storage.ts. Nothing in this app displays a photo anywhere
+   * near this large (avatars are tens of pixels, the detail page's is under
+   * 100px), so this is generous headroom for retina displays and any future
+   * larger use, while still cutting a typical 4000x3000 phone photo down
+   * substantially for storage and load time.
+   */
+  photoMaxDimension: Number(process.env.PHOTO_MAX_DIMENSION ?? 2000),
+
+  /** JPEG re-encode quality (0-100) applied to every stored photo. */
+  photoQuality: Number(process.env.PHOTO_QUALITY ?? 82),
 
   /**
    * The built frontend (web/dist). When this directory exists, the server

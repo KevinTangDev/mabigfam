@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../db.js";
+import { ACTIVE_MEMBER, prisma } from "../db.js";
 import { config } from "../config.js";
 import { hasValidSession, verifyCalendarToken } from "../auth.js";
 import { buildCalendar } from "../export/ical.js";
@@ -23,7 +23,7 @@ export async function calendarRoutes(app: FastifyInstance) {
 
       const [events, members] = await Promise.all([
         prisma.familyEvent.findMany({ orderBy: { startsAt: "asc" } }),
-        prisma.familyMember.findMany({ where: { birthday: { not: null } } }),
+        prisma.familyMember.findMany({ where: { birthday: { not: null }, ...ACTIVE_MEMBER } }),
       ]);
 
       return reply

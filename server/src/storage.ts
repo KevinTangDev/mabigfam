@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { config } from "./config.js";
 
 /**
@@ -56,7 +57,43 @@ export function isHeic(buffer: Buffer): boolean {
 
 export class UnsupportedImageError extends Error {}
 
-/** Writes a photo and returns the opaque key to persist in `photoPath`. */
+/**
+ * Resizes to fit within config.photoMaxDimension and re-encodes as JPEG at
+ * config.photoQuality. Every accepted photo goes through this — normalizing
+ * to one format keeps the rest of the app simple (readPhoto's mime sniff,
+ * the vCard exporter's TYPE param) and a re-encoded phone photo is typically
+ * a small fraction of its original size.
+ *
+ * `.rotate()` with no arguments auto-orients from the EXIF orientation tag
+ * and bakes it into the pixels — required here, not cosmetic: sharp doesn't
+ * carry EXIF through the JPEG re-encode by default, so skipping this step
+ * would silently ship sideways photos for any phone photo taken in portrait
+ * (commonly stored as landscape pixels + an orientation tag).
+ */
+async function resizeToJpeg(buffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(buffer)
+      .rotate()
+      .resize({
+        width: config.photoMaxDimension,
+        height: config.photoMaxDimension,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: config.photoQuality })
+      .toBuffer();
+  } catch (err) {
+    throw new UnsupportedImageError(
+      `Could not process that image: ${err instanceof Error ? err.message : "unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Validates, resizes and writes a photo, returning the opaque key to persist
+ * in `photoPath`. Always stored as JPEG regardless of the upload's original
+ * format — see resizeToJpeg.
+ */
 export async function savePhoto(buffer: Buffer): Promise<string> {
   const kind = sniffImage(buffer);
 
@@ -69,12 +106,14 @@ export async function savePhoto(buffer: Buffer): Promise<string> {
     );
   }
 
+  const resized = await resizeToJpeg(buffer);
+
   // Random filename: never derived from user input, so there is no path
   // traversal or collision surface.
-  const key = `${crypto.randomUUID()}.${kind.ext}`;
+  const key = `${crypto.randomUUID()}.jpg`;
 
   await fs.mkdir(config.uploadDir, { recursive: true });
-  await fs.writeFile(path.join(config.uploadDir, key), buffer);
+  await fs.writeFile(path.join(config.uploadDir, key), resized);
 
   return key;
 }
