@@ -5,6 +5,7 @@ import MemberFormModal from "../components/MemberFormModal";
 import PhotoUploader from "../components/PhotoUploader";
 import RelationSection from "../components/RelationSection";
 import { Button, cardClass, inputClass } from "../components/ui";
+import Icon from "../components/icons";
 import type {
   FamilyMember,
   MemberRelations,
@@ -143,7 +144,8 @@ export default function MemberDetail() {
   return (
     <div>
       <Button variant="ghost" onClick={() => navigate(-1)} className="mb-3 -ml-3">
-        ← Back
+        <Icon name="arrowLeft" />
+        Back
       </Button>
 
       <div className={`${cardClass} p-5`}>

@@ -82,14 +82,14 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ctp-crust/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ctp-crust/60 backdrop-blur-sm sm:items-center sm:p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border
-                   border-ctp-surface1 bg-ctp-base p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-ctp-surface1
+                   bg-ctp-base p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-xl sm:p-6"
       >
         <h2 className="text-lg font-semibold text-ctp-text">{title}</h2>
 

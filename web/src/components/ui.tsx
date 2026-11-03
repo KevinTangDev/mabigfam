@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 /** Shared class strings so form controls stay consistent across pages. */
 export const inputClass =
   "w-full rounded-lg border border-ctp-surface1 bg-ctp-mantle px-3 py-2 text-sm text-ctp-text " +
-  "placeholder:text-ctp-overlay0 outline-none transition focus:border-ctp-blue " +
+  "placeholder:text-ctp-overlay0 outline-none transition focus:border-ctp-blue pointer-coarse:py-3 " +
   "focus:ring-2 focus:ring-ctp-blue/30";
 
 export const cardClass = "rounded-xl border border-ctp-surface0 bg-ctp-mantle";
@@ -35,7 +35,7 @@ export function Button({ variant = "default", className = "", children, ...rest 
     <button
       {...rest}
       className={
-        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 " +
+        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 pointer-coarse:min-h-11 " +
         "text-sm font-medium transition outline-none focus-visible:ring-2 " +
         "disabled:cursor-not-allowed disabled:opacity-50 " +
         `${variants[variant]} ${className}`

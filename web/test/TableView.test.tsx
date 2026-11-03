@@ -140,7 +140,7 @@ describe("TableView", () => {
     const container = await renderTable();
     await settle();
 
-    const addBtn = [...container.querySelectorAll("button")].find((b) => b.textContent === "+ Add member")!;
+    const addBtn = [...container.querySelectorAll("button")].find((b) => b.textContent === "Add member")!;
     await click(addBtn);
 
     const nameInput = container.querySelector("[role=dialog] input") as HTMLInputElement;

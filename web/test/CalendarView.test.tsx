@@ -159,7 +159,7 @@ describe("CalendarView", () => {
     const container = await renderCalendar();
     await settle();
 
-    const addBtn = [...container.querySelectorAll("button")].find((b) => b.textContent === "+ Add event")!;
+    const addBtn = [...container.querySelectorAll("button")].find((b) => b.textContent === "Add event")!;
     await click(addBtn);
 
     expect(container.querySelector("[role=dialog]")).toBeTruthy();

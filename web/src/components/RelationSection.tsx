@@ -60,7 +60,7 @@ export default function RelationSection({
             <Button
               variant="danger"
               onClick={() => onRemove(member.id)}
-              className="ml-auto opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+              className="ml-auto opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
             >
               Remove
             </Button>

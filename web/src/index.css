@@ -117,6 +117,21 @@
   body {
     @apply bg-ctp-base text-ctp-text font-sans antialiased;
   }
+
+  /* Visible keyboard focus everywhere, without a ring on mouse/touch clicks. */
+  :where(a, button, [role="menuitem"], summary):focus-visible {
+    outline: 2px solid var(--ctp-blue);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer components {

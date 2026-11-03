@@ -4,17 +4,20 @@ import { api } from "../api/client";
 import MemberFormModal from "../components/MemberFormModal";
 import Avatar from "../components/Avatar";
 import ExportMenu from "../components/ExportMenu";
+import Icon from "../components/icons";
 import { Button, cardClass, inputClass } from "../components/ui";
 import type { FamilyMember } from "../types";
 
 type SortKey = "name" | "nameZh" | "birthday" | "phone";
 type SortDir = "asc" | "desc";
 
-const COLUMNS: { key: SortKey; label: string }[] = [
+// Secondary columns collapse below `sm` — on a phone the row is avatar + name
+// (with the details folded underneath) rather than a sideways-scrolling table.
+const COLUMNS: { key: SortKey; label: string; secondary?: boolean }[] = [
   { key: "name", label: "Name" },
-  { key: "nameZh", label: "Chinese name" },
-  { key: "birthday", label: "Birthday" },
-  { key: "phone", label: "Phone" },
+  { key: "nameZh", label: "Chinese name", secondary: true },
+  { key: "birthday", label: "Birthday", secondary: true },
+  { key: "phone", label: "Phone", secondary: true },
 ];
 
 export default function TableView() {
@@ -79,27 +82,38 @@ export default function TableView() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <input
-          placeholder="Filter by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className={`${inputClass} max-w-xs`}
-        />
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none sm:basis-72">
+          <Icon
+            name="search"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ctp-overlay1"
+          />
+          <input
+            type="search"
+            aria-label="Filter members"
+            placeholder="Filter by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`${inputClass} pl-9`}
+          />
+        </div>
         <span className="text-sm text-ctp-subtext0">
           {filtered.length} {filtered.length === 1 ? "member" : "members"}
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
           <Link
             to="/trash"
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-ctp-subtext0
-                       transition hover:bg-ctp-surface0 hover:text-ctp-text"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium
+                       text-ctp-subtext0 transition hover:bg-ctp-surface0 hover:text-ctp-text
+                       pointer-coarse:min-h-11"
           >
+            <Icon name="trash" />
             Trash
           </Link>
           <ExportMenu />
-          <Button variant="primary" onClick={() => setShowCreate(true)}>
-            + Add member
+          <Button variant="primary" onClick={() => setShowCreate(true)} className="ml-auto sm:ml-0">
+            <Icon name="plus" />
+            Add member
           </Button>
         </div>
       </div>
@@ -117,14 +131,23 @@ export default function TableView() {
                 {COLUMNS.map((col) => (
                   <th
                     key={col.key}
+                    aria-sort={
+                      sortKey === col.key ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+                    }
                     onClick={() => toggleSort(col.key)}
-                    className="cursor-pointer select-none px-3 py-2.5 text-left text-xs font-semibold
-                               tracking-wide text-ctp-subtext0 uppercase transition hover:text-ctp-text"
+                    className={
+                      "cursor-pointer select-none px-3 py-2.5 text-left text-xs font-semibold " +
+                      "tracking-wide text-ctp-subtext0 uppercase transition hover:text-ctp-text" +
+                      (col.secondary ? " hidden sm:table-cell" : "")
+                    }
                   >
                     {col.label}
-                    <span className="ml-1 text-ctp-blue">
-                      {sortKey === col.key ? (sortDir === "asc" ? "▲" : "▼") : ""}
-                    </span>
+                    {sortKey === col.key && (
+                      <Icon
+                        name={sortDir === "asc" ? "chevronUp" : "chevronDown"}
+                        className="ml-1 inline size-3.5 text-ctp-blue"
+                      />
+                    )}
                   </th>
                 ))}
                 <th />
@@ -141,19 +164,36 @@ export default function TableView() {
                   <td className="py-2 pl-3">
                     <Avatar member={m} size={34} />
                   </td>
-                  <td className="px-3 py-2 font-medium">{m.name}</td>
-                  <td className="px-3 py-2 text-ctp-subtext1">{m.nameZh ?? "—"}</td>
-                  <td className="px-3 py-2 text-ctp-subtext1">
+                  <td className="px-3 py-2 font-medium">
+                    {/* A real link so the row is reachable by keyboard; the row's own
+                        onClick covers the rest of the click target for mouse/touch. */}
+                    <Link
+                      to={`/members/${m.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-ctp-blue"
+                    >
+                      {m.name}
+                    </Link>
+                    <span className="block text-xs font-normal text-ctp-subtext0 sm:hidden">
+                      {[m.nameZh, m.birthday?.slice(0, 10), m.phone].filter(Boolean).join(" · ")}
+                    </span>
+                  </td>
+                  <td className="hidden px-3 py-2 text-ctp-subtext1 sm:table-cell">{m.nameZh ?? "—"}</td>
+                  <td className="hidden px-3 py-2 text-ctp-subtext1 sm:table-cell">
                     {m.birthday ? m.birthday.slice(0, 10) : "—"}
                   </td>
-                  <td className="px-3 py-2 text-ctp-subtext1">{m.phone ?? "—"}</td>
+                  <td className="hidden px-3 py-2 text-ctp-subtext1 sm:table-cell">{m.phone ?? "—"}</td>
                   <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                    {/* Hover-reveal only where there's a hover; touch screens always show it. */}
                     <Button
                       variant="danger"
                       onClick={() => handleDelete(m.id, m.name)}
-                      className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={`Delete ${m.name}`}
+                      className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100
+                                 pointer-coarse:opacity-100"
                     >
-                      Delete
+                      <Icon name="trash" />
+                      <span className="max-sm:sr-only">Delete</span>
                     </Button>
                   </td>
                 </tr>
