@@ -6,6 +6,8 @@ import Avatar from "../components/Avatar";
 import ExportMenu from "../components/ExportMenu";
 import Icon from "../components/icons";
 import { Button, Chip, EmptyState, PageHeader, Skeleton, cardClass, inputClass, selectClass } from "../components/ui";
+import { useI18n } from "../i18n/context";
+import type { BaseKey } from "../i18n/config";
 import { daysUntil } from "../lib/birthdays";
 import { nextBirthday } from "../lib/calendarLinks";
 import { buildRelationIndex, relationshipLabels } from "../lib/relationships";
@@ -19,18 +21,18 @@ type ViewMode = "cards" | "table";
 
 // Secondary columns collapse below `sm` — on a phone a table row is avatar +
 // name (with the details folded underneath) rather than a sideways scroll.
-const COLUMNS: { key: SortKey; label: string; secondary?: boolean }[] = [
-  { key: "name", label: "Name" },
-  { key: "nameZh", label: "Chinese name", secondary: true },
-  { key: "birthday", label: "Birthday", secondary: true },
-  { key: "phone", label: "Phone", secondary: true },
+const COLUMNS: { key: SortKey; label: BaseKey; secondary?: boolean }[] = [
+  { key: "name", label: "contacts.col.name" },
+  { key: "nameZh", label: "contacts.col.nameZh", secondary: true },
+  { key: "birthday", label: "contacts.col.birthday", secondary: true },
+  { key: "phone", label: "contacts.col.phone", secondary: true },
 ];
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: "name:asc", label: "Name (A–Z)" },
-  { value: "name:desc", label: "Name (Z–A)" },
-  { value: "upcoming:asc", label: "Next birthday" },
-  { value: "createdAt:desc", label: "Recently added" },
+const SORT_OPTIONS: { value: string; label: BaseKey }[] = [
+  { value: "name:asc", label: "contacts.sort.nameAsc" },
+  { value: "name:desc", label: "contacts.sort.nameDesc" },
+  { value: "upcoming:asc", label: "contacts.sort.upcoming" },
+  { value: "createdAt:desc", label: "contacts.sort.recent" },
 ];
 
 const VIEW_KEY = "mabigfam-contacts-view";
@@ -69,7 +71,8 @@ function ContactCard({
   relations: Relations | undefined;
   onDelete: () => void;
 }) {
-  const labels = relations ? relationshipLabels(relations).slice(0, 2) : [];
+  const { t, date } = useI18n();
+  const labels = relations ? relationshipLabels(relations, t).slice(0, 2) : [];
 
   return (
     <li
@@ -90,12 +93,7 @@ function ContactCard({
           {member.birthday && (
             <span className="mt-0.5 flex items-center gap-1 text-xs text-ctp-overlay1">
               <Icon name="cake" className="size-3.5" />
-              {new Date(member.birthday).toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "UTC",
-              })}
+              {date(member.birthday, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
             </span>
           )}
         </span>
@@ -114,30 +112,30 @@ function ContactCard({
           <>
             <a
               href={`tel:${digits(member.phone)}`}
-              aria-label={`Call ${member.name}`}
+              aria-label={t("contacts.callAria", { name: member.name })}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-ctp-green/12 px-3 text-xs font-semibold
                          text-ctp-green transition hover:bg-ctp-green/20 pointer-coarse:min-h-11"
             >
               <Icon name="phone" className="size-3.5" />
-              Call
+              {t("contacts.call")}
             </a>
             <a
               href={`sms:${digits(member.phone)}`}
-              aria-label={`Message ${member.name}`}
+              aria-label={t("contacts.messageAria", { name: member.name })}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-ctp-blue/12 px-3 text-xs font-semibold
                          text-ctp-blue transition hover:bg-ctp-blue/20 pointer-coarse:min-h-11"
             >
               <Icon name="message" className="size-3.5" />
-              Message
+              {t("contacts.message")}
             </a>
           </>
         ) : (
-          <span className="text-xs text-ctp-overlay1">No phone number yet</span>
+          <span className="text-xs text-ctp-overlay1">{t("contacts.noPhone")}</span>
         )}
         <button
           onClick={onDelete}
-          aria-label={`Delete ${member.name}`}
-          title="Move to Trash"
+          aria-label={t("contacts.deleteAria", { name: member.name })}
+          title={t("contacts.deleteTitle")}
           className="ml-auto inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-ctp-overlay1
                      transition hover:bg-ctp-red/10 hover:text-ctp-red pointer-coarse:size-11"
         >
@@ -149,6 +147,7 @@ function ContactCard({
 }
 
 export default function ContactsView() {
+  const { t, errorText } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tree, setTree] = useState<TreeData | null>(null);
@@ -166,12 +165,14 @@ export default function ContactsView() {
       setTree(await api.getTree());
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load members");
+      setError(errorText(err, "contacts.loadFailed"));
     }
   }
 
   useEffect(() => {
     load();
+    // load() only reads errorText, which changes with the language and shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const members = useMemo(() => tree?.members ?? [], [tree]);
@@ -219,7 +220,7 @@ export default function ContactsView() {
     // A soft delete — moves them to the Trash rather than losing anything,
     // so this confirm is a light misclick guard, not a warning about
     // irreversible loss.
-    if (!confirm(`Move ${name} to Trash? You can restore them anytime.`)) return;
+    if (!confirm(t("contacts.confirmTrash", { name }))) return;
     await api.deleteMember(id);
     load();
   }
@@ -227,16 +228,18 @@ export default function ContactsView() {
   const sortSelectValue = `${sortKey}:${sortDir}`;
   const loading = !tree && !error;
   const filters: { id: Filter; label: string; count: number }[] = [
-    { id: "all", label: "Everyone", count: members.length },
-    { id: "photo", label: "With photo", count: members.filter((m) => m.photoPath).length },
-    { id: "phone", label: "With phone", count: members.filter((m) => m.phone).length },
+    { id: "all", label: t("contacts.filter.everyone"), count: members.length },
+    { id: "photo", label: t("contacts.filter.photo"), count: members.filter((m) => m.photoPath).length },
+    { id: "phone", label: t("contacts.filter.phone"), count: members.filter((m) => m.phone).length },
   ];
 
   return (
     <div>
       <PageHeader
-        title="Contacts"
-        subtitle={tree ? `${filtered.length} of ${members.length} ${members.length === 1 ? "person" : "people"}` : "Loading..."}
+        title={t("contacts.title")}
+        subtitle={
+          tree ? t("contacts.count", { shown: filtered.length, total: members.length, count: members.length }) : t("common.loading")
+        }
         actions={
           <>
             <Link
@@ -246,12 +249,12 @@ export default function ContactsView() {
                          pointer-coarse:min-h-11"
             >
               <Icon name="trash" />
-              Trash
+              {t("contacts.trash")}
             </Link>
             <ExportMenu />
             <Button variant="primary" onClick={() => setShowCreate(true)}>
               <Icon name="plus" />
-              Add member
+              {t("contacts.add")}
             </Button>
           </>
         }
@@ -265,8 +268,8 @@ export default function ContactsView() {
           />
           <input
             type="search"
-            aria-label="Filter members"
-            placeholder="Filter by name..."
+            aria-label={t("contacts.filterAria")}
+            placeholder={t("contacts.filterPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={`${inputClass} pl-10`}
@@ -274,7 +277,7 @@ export default function ContactsView() {
         </div>
 
         <select
-          aria-label="Sort contacts"
+          aria-label={t("contacts.sortAria")}
           value={sortSelectValue}
           onChange={(e) => {
             const [key, dir] = e.target.value.split(":") as [SortKey, SortDir];
@@ -284,31 +287,31 @@ export default function ContactsView() {
           className={selectClass}
         >
           {SORT_OPTIONS.every((o) => o.value !== sortSelectValue) && (
-            <option value={sortSelectValue}>Sorted by column</option>
+            <option value={sortSelectValue}>{t("contacts.sort.column")}</option>
           )}
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {t(o.label)}
             </option>
           ))}
         </select>
 
         <div
           role="group"
-          aria-label="View"
+          aria-label={t("contacts.viewAria")}
           className="ml-auto inline-flex rounded-xl border border-ctp-surface1 bg-ctp-mantle p-0.5"
         >
           {(
             [
-              ["cards", "grid", "Cards"],
-              ["table", "list", "Table"],
+              ["cards", "grid", "contacts.viewCards", "contacts.viewCardsAria"],
+              ["table", "list", "contacts.viewTable", "contacts.viewTableAria"],
             ] as const
-          ).map(([mode, icon, label]) => (
+          ).map(([mode, icon, label, ariaLabel]) => (
             <button
               key={mode}
               onClick={() => chooseView(mode)}
               aria-pressed={view === mode}
-              aria-label={`${label} view`}
+              aria-label={t(ariaLabel)}
               className={
                 "inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-semibold transition " +
                 "pointer-coarse:min-h-10 " +
@@ -316,13 +319,13 @@ export default function ContactsView() {
               }
             >
               <Icon name={icon} />
-              <span className="hidden sm:inline">{label}</span>
+              <span className="hidden sm:inline">{t(label)}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="group" aria-label="Quick filters">
+      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" role="group" aria-label={t("contacts.filtersAria")}>
         {filters.map((f) => (
           <button
             key={f.id}
@@ -355,19 +358,19 @@ export default function ContactsView() {
           {members.length === 0 ? (
             <EmptyState
               icon="users"
-              title="No family members yet"
+              title={t("contacts.empty.title")}
               action={
                 <Button variant="primary" onClick={() => setShowCreate(true)}>
                   <Icon name="plus" />
-                  Add the first one
+                  {t("contacts.empty.addFirst")}
                 </Button>
               }
             >
-              Add the first person to get started.
+              {t("contacts.empty.body")}
             </EmptyState>
           ) : (
-            <EmptyState icon="search" title="No members match that filter">
-              Try a different name, or switch back to Everyone.
+            <EmptyState icon="search" title={t("contacts.noMatch.title")}>
+              {t("contacts.noMatch.body")}
             </EmptyState>
           )}
         </div>
@@ -399,7 +402,7 @@ export default function ContactsView() {
                       (col.secondary ? " hidden sm:table-cell" : "")
                     }
                   >
-                    {col.label}
+                    {t(col.label)}
                     {sortKey === col.key && (
                       <Icon
                         name={sortDir === "asc" ? "chevronUp" : "chevronDown"}
@@ -446,12 +449,12 @@ export default function ContactsView() {
                     <Button
                       variant="danger"
                       onClick={() => handleDelete(m.id, m.name)}
-                      aria-label={`Delete ${m.name}`}
+                      aria-label={t("contacts.deleteAria", { name: m.name })}
                       className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100
                                  pointer-coarse:opacity-100"
                     >
                       <Icon name="trash" />
-                      <span className="max-sm:sr-only">Delete</span>
+                      <span className="max-sm:sr-only">{t("common.delete")}</span>
                     </Button>
                   </td>
                 </tr>
@@ -463,7 +466,7 @@ export default function ContactsView() {
 
       {showCreate && (
         <MemberFormModal
-          title="Add family member"
+          title={t("contacts.addTitle")}
           onClose={closeCreate}
           onSubmit={async (data) => {
             await api.createMember(data);

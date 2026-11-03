@@ -43,6 +43,35 @@ utility emits a `var()` reference and follows whichever flavor is active —
 which is why there are almost no `dark:` variants in the markup. To restyle,
 change the variables in that one file.
 
+## Languages
+
+The whole UI is available in **English, French and Simplified Chinese**, chosen
+with the EN / FR / 中文 switcher in the header (and on the sign-in screen). It
+applies instantly without a reload, is remembered in `localStorage`
+(`mabigfam-lang`), and defaults to English when nothing is saved. Dates and
+numbers use the matching locale (`en`, `fr-FR`, `zh-CN`) and `<html lang>`
+follows the choice so screen readers and the browser's CJK fonts behave.
+
+It is a small in-house layer rather than a library — [`web/src/i18n/`](web/src/i18n):
+
+- `en.ts` is the source dictionary; `fr.ts` and `zh.ts` are typed
+  `Record<MessageKey, string>`, so a missing translation is a **compile error**.
+- Components call `const { t, date, number, errorText } = useI18n()`. Keys are
+  typed, `{name}` interpolates, and `_one`/`_other` variants resolve plurals via
+  `Intl.PluralRules`.
+- The API replies in English; `errorText()` maps the server's known messages
+  ([`serverErrors.ts`](web/src/i18n/serverErrors.ts)) to the active language.
+- `web/test/i18nAudit.test.ts` parses every component and fails if hardcoded
+  user-facing English creeps back in.
+
+To add a string: add the key to `en.ts`, then `fr.ts` and `zh.ts` (the build tells
+you if you forget). To add a language: add a dictionary, then an entry in
+`LANG_META` and `DICTIONARIES` in `config.ts`.
+
+Not translated: user-entered data (names, events, notes), the product name, and
+the files the *server* generates — CSV column headers, the `.ics` feed and vCards —
+because those are fetched without a session and so have no language to follow.
+
 ## Roadmap
 
 Against the original brief, these are still to come:

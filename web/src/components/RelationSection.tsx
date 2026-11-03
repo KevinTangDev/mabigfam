@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "../i18n/context";
 import Avatar from "./Avatar";
 import Icon from "./icons";
 import { Button, Chip, cardClass, inputClass } from "./ui";
@@ -38,6 +39,7 @@ export default function RelationSection({
   extraControl,
 }: Props) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
     <section className={`${cardClass} p-4 sm:p-5`}>
@@ -65,7 +67,7 @@ export default function RelationSection({
               onClick={() => onRemove(member.id)}
               className="ml-auto px-2.5 py-1 text-xs opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
             >
-              Remove
+              {t("common.remove")}
             </Button>
           </li>
         ))}
@@ -76,7 +78,7 @@ export default function RelationSection({
         <select
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
-          className={`${inputClass} min-w-0 flex-1`}
+          className={`${inputClass} min-w-[11rem] flex-1`}
         >
           <option value="">{placeholder}</option>
           {pickable.map((m) => (
@@ -88,7 +90,7 @@ export default function RelationSection({
         {extraControl}
         <Button onClick={onAdd} disabled={!value}>
           <Icon name="plus" />
-          Add
+          {t("common.add")}
         </Button>
       </div>
     </section>

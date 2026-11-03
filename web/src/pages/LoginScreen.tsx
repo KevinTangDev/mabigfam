@@ -2,11 +2,14 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import Icon from "../components/icons";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useI18n } from "../i18n/context";
 import Logo from "../components/Logo";
 import { Button, cardClass, inputClass } from "../components/ui";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { t, errorText } = useI18n();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -18,7 +21,7 @@ export default function LoginScreen() {
     try {
       await login(password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sign in");
+      setError(errorText(err, "login.failed"));
       setBusy(false);
     }
   }
@@ -29,18 +32,22 @@ export default function LoginScreen() {
       <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-24 size-96 rounded-full bg-brand/15 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-20 -bottom-24 size-96 rounded-full bg-ctp-pink/15 blur-3xl" />
 
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       <div className="page-enter relative w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo className="size-16 rounded-2xl" />
           <h1 className="mt-4 text-4xl font-semibold text-ctp-text">MaBigFam</h1>
-          <p className="mt-1.5 text-sm text-ctp-subtext0">Your whole family, in one warm place.</p>
+          <p className="mt-1.5 text-sm text-ctp-subtext0">{t("login.tagline")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className={`${cardClass} p-6 shadow-pop sm:p-7`}>
           <label htmlFor="family-password" className="text-sm font-semibold text-ctp-text">
-            Family password
+            {t("login.label")}
           </label>
-          <p className="mt-0.5 text-xs text-ctp-subtext0">Ask whoever set up the app if you don't have it.</p>
+          <p className="mt-0.5 text-xs text-ctp-subtext0">{t("login.hint")}</p>
 
           <div className="relative mt-3">
             <Icon
@@ -52,7 +59,7 @@ export default function LoginScreen() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Family password"
+              placeholder={t("login.placeholder")}
               autoFocus
               autoComplete="current-password"
               className={`${inputClass} pl-10`}
@@ -66,7 +73,7 @@ export default function LoginScreen() {
           )}
 
           <Button type="submit" variant="primary" disabled={busy || !password} className="mt-4 w-full py-2.5">
-            {busy ? "Signing in..." : "Sign in"}
+            {busy ? t("login.signingIn") : t("login.signIn")}
           </Button>
         </form>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useI18n } from "../i18n/context";
 import type { FamilyEvent, FamilyEventInput } from "../types";
 import { Button, inputClass } from "./ui";
 
@@ -31,6 +32,7 @@ function fromLocalInput(value: string, allDay: boolean): string | null {
 }
 
 export default function EventFormModal({ title, initial, onSubmit, onClose }: Props) {
+  const { t, errorText } = useI18n();
   const [name, setName] = useState(initial?.title ?? "");
   const [allDay, setAllDay] = useState(initial?.allDay ?? false);
   const [startsAt, setStartsAt] = useState(toLocalInput(initial?.startsAt, initial?.allDay ?? false));
@@ -57,8 +59,8 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return setError("Title is required");
-    if (!startsAt) return setError("Start date is required");
+    if (!name.trim()) return setError(t("eventForm.titleRequired"));
+    if (!startsAt) return setError(t("eventForm.startRequired"));
 
     setSaving(true);
     setError(null);
@@ -72,7 +74,7 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
         allDay,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(errorText(err, "common.somethingWrong"));
       setSaving(false);
     }
   }
@@ -95,12 +97,12 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-ctp-subtext0">Title *</span>
+            <span className="text-xs font-medium text-ctp-subtext0">{t("eventForm.title")}</span>
             <input
               value={name}
               autoFocus
               onChange={(e) => setName(e.target.value)}
-              placeholder="Chinese New Year dinner"
+              placeholder={t("eventForm.titlePlaceholder")}
               className={inputClass}
             />
           </label>
@@ -112,12 +114,12 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
               onChange={(e) => switchAllDay(e.target.checked)}
               className="size-4 accent-[var(--ctp-blue)]"
             />
-            All day
+            {t("eventForm.allDay")}
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-ctp-subtext0">Starts *</span>
+              <span className="text-xs font-medium text-ctp-subtext0">{t("eventForm.starts")}</span>
               <input
                 type={dateType}
                 value={startsAt}
@@ -127,7 +129,7 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ctp-subtext0">
-                {allDay ? "Last day" : "Ends"}
+                {allDay ? t("eventForm.lastDay") : t("eventForm.ends")}
               </span>
               <input
                 type={dateType}
@@ -139,7 +141,7 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
           </div>
 
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-ctp-subtext0">Location</span>
+            <span className="text-xs font-medium text-ctp-subtext0">{t("eventForm.location")}</span>
             <input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -148,7 +150,7 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-ctp-subtext0">Notes</span>
+            <span className="text-xs font-medium text-ctp-subtext0">{t("eventForm.notes")}</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -161,10 +163,10 @@ export default function EventFormModal({ title, initial, onSubmit, onClose }: Pr
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         </form>

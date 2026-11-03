@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "../src/i18n/config";
 import { countdownLabel, daysUntil, upcomingBirthdays } from "../src/lib/birthdays";
 import type { FamilyMember } from "../src/types";
 
@@ -28,7 +29,7 @@ describe("countdownLabel", () => {
     [60, "In 60 days"],
     [90, "In 3 months"],
   ])("%i days -> %s", (days, label) => {
-    expect(countdownLabel(days)).toBe(label);
+    expect(countdownLabel(days, createI18n("en").t)).toBe(label);
   });
 });
 

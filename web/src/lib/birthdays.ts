@@ -1,4 +1,5 @@
 import { nextBirthday, turningAge } from "./calendarLinks";
+import type { TFn } from "../i18n/config";
 import type { FamilyMember } from "../types";
 
 export interface UpcomingBirthday {
@@ -18,11 +19,11 @@ export function daysUntil(date: Date, now = new Date()): number {
   return Math.round((date.getTime() - today) / DAY_MS);
 }
 
-export function countdownLabel(days: number): string {
-  if (days <= 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  if (days <= 60) return `In ${days} days`;
-  return `In ${Math.round(days / 30)} months`;
+export function countdownLabel(days: number, t: TFn): string {
+  if (days <= 0) return t("countdown.today");
+  if (days === 1) return t("countdown.tomorrow");
+  if (days <= 60) return t("countdown.days", { count: days });
+  return t("countdown.months", { count: Math.round(days / 30) });
 }
 
 /** Everyone with a birthday on file, soonest first. */

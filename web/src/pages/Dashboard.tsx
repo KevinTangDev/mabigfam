@@ -7,6 +7,8 @@ import CountdownChip from "../components/CountdownChip";
 import Icon from "../components/icons";
 import type { IconName } from "../components/icons";
 import { Button, Chip, EmptyState, Skeleton, cardClass } from "../components/ui";
+import { useI18n } from "../i18n/context";
+import type { BaseKey } from "../i18n/config";
 import { upcomingBirthdays } from "../lib/birthdays";
 import { addedLabel, eventDayParts, greeting } from "../lib/dateParts";
 import { generationCount, generationMap } from "../lib/generations";
@@ -25,6 +27,7 @@ function Section({
   children: ReactNode;
   delay?: number;
 }) {
+  const { t } = useI18n();
   return (
     <section className={`${cardClass} rise-in p-4 sm:p-5`} style={{ "--delay": `${delay}ms` } as React.CSSProperties}>
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -34,7 +37,7 @@ function Section({
             to={to}
             className="inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-brand hover:text-brand-strong"
           >
-            {linkLabel ?? "See all"}
+            {linkLabel ?? t("common.seeAll")}
             <Icon name="chevronRight" className="size-4" />
           </Link>
         )}
@@ -73,25 +76,29 @@ function StatTile({
   );
 }
 
-const SHORTCUTS: { to: string; icon: IconName; label: string; hint: string; tint: string }[] = [
-  { to: "/contacts?new=1", icon: "plus", label: "Add a member", hint: "Grow the family", tint: "bg-brand/12 text-brand" },
-  { to: "/tree", icon: "tree", label: "Open the tree", hint: "Explore relatives", tint: "bg-ctp-green/15 text-ctp-green" },
-  { to: "/calendar?new=1", icon: "calendar", label: "Plan an event", hint: "Reunions & dates", tint: "bg-ctp-blue/15 text-ctp-blue" },
-  { to: "/game", icon: "game", label: "Play the game", hint: "Who's this?", tint: "bg-ctp-pink/15 text-ctp-pink" },
+const SHORTCUTS: { to: string; icon: IconName; label: BaseKey; hint: BaseKey; tint: string }[] = [
+  { to: "/contacts?new=1", icon: "plus", label: "dash.shortcut.add", hint: "dash.shortcut.addHint", tint: "bg-brand/12 text-brand" },
+  { to: "/tree", icon: "tree", label: "dash.shortcut.tree", hint: "dash.shortcut.treeHint", tint: "bg-ctp-green/15 text-ctp-green" },
+  { to: "/calendar?new=1", icon: "calendar", label: "dash.shortcut.event", hint: "dash.shortcut.eventHint", tint: "bg-ctp-blue/15 text-ctp-blue" },
+  { to: "/game", icon: "game", label: "dash.shortcut.game", hint: "dash.shortcut.gameHint", tint: "bg-ctp-pink/15 text-ctp-pink" },
 ];
 
 export default function Dashboard() {
+  const i18n = useI18n();
+  const { t, number, date, errorText } = i18n;
   const [tree, setTree] = useState<TreeData | null>(null);
   const [events, setEvents] = useState<FamilyEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([api.getTree(), api.listEvents()])
-      .then(([t, e]) => {
-        setTree(t);
-        setEvents(e);
+      .then(([treeData, eventList]) => {
+        setTree(treeData);
+        setEvents(eventList);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load the dashboard"));
+      .catch((err) => setError(errorText(err, "dash.loadFailed")));
+    // errorText only changes with the language, which shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const view = useMemo(() => {
@@ -143,18 +150,17 @@ export default function Dashboard() {
       <div className={cardClass}>
         <EmptyState
           icon="sparkles"
-          title="Welcome to MaBigFam"
+          title={t("dash.welcomeTitle")}
           action={
             <Link to="/contacts?new=1">
               <Button variant="primary">
                 <Icon name="plus" />
-                Add the first family member
+                {t("dash.addFirst")}
               </Button>
             </Link>
           }
         >
-          This is your family's home. Start by adding a person — then link parents, children and
-          partners to grow the tree.
+          {t("dash.welcomeBody")}
         </EmptyState>
       </div>
     );
@@ -171,14 +177,16 @@ export default function Dashboard() {
           aria-hidden="true"
           className="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-brand/10 blur-3xl"
         />
-        <p className="text-sm font-semibold text-brand">{greeting()}</p>
+        <p className="text-sm font-semibold text-brand">{greeting(t)}</p>
         <h2 className="mt-1 max-w-xl text-3xl leading-tight font-semibold text-ctp-text sm:text-4xl">
-          Your family, all in one place.
+          {t("dash.heroTitle")}
         </h2>
         <p className="mt-2 max-w-md text-sm text-ctp-subtext0">
           {view.birthdays[0] && view.birthdays[0].daysAway > 0
-            ? `Next up: ${view.birthdays[0].member.name}'s birthday — ${view.birthdays[0].daysAway === 1 ? "tomorrow" : `in ${view.birthdays[0].daysAway} days`}.`
-            : "Here's what's happening with the people you love."}
+            ? view.birthdays[0].daysAway === 1
+              ? t("dash.nextUpTomorrow", { name: view.birthdays[0].member.name })
+              : t("dash.nextUpDays", { name: view.birthdays[0].member.name, count: view.birthdays[0].daysAway })
+            : t("dash.heroDefault")}
         </p>
 
         {today.length > 0 && (
@@ -191,7 +199,7 @@ export default function Dashboard() {
               >
                 <Avatar member={member} size={34} />
                 <span className="text-sm font-semibold text-ctp-text">
-                  It's {member.name.split(" ")[0]}'s birthday — {turning} today!
+                  {t("dash.birthdayToday", { name: member.name.split(" ")[0]!, age: turning })}
                 </span>
                 <Icon name="sparkles" className="size-4 text-brand" />
               </Link>
@@ -202,10 +210,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon="users" value={tree.members.length} label="Family members" tint="bg-brand/12 text-brand" delay={60} />
-        <StatTile icon="tree" value={view.generationCount} label={view.generationCount === 1 ? "Generation" : "Generations"} tint="bg-ctp-green/15 text-ctp-green" delay={110} />
-        <StatTile icon="heart" value={view.couples} label={view.couples === 1 ? "Couple" : "Couples"} tint="bg-ctp-pink/15 text-ctp-pink" delay={160} />
-        <StatTile icon="camera" value={`${view.photos}/${tree.members.length}`} label="With a photo" tint="bg-ctp-blue/15 text-ctp-blue" delay={210} />
+        <StatTile icon="users" value={number(tree.members.length)} label={t("dash.stat.members")} tint="bg-brand/12 text-brand" delay={60} />
+        <StatTile icon="tree" value={number(view.generationCount)} label={t("dash.stat.generations", { count: view.generationCount })} tint="bg-ctp-green/15 text-ctp-green" delay={110} />
+        <StatTile icon="heart" value={number(view.couples)} label={t("dash.stat.couples", { count: view.couples })} tint="bg-ctp-pink/15 text-ctp-pink" delay={160} />
+        <StatTile icon="camera" value={`${view.photos}/${tree.members.length}`} label={t("dash.stat.photos")} tint="bg-ctp-blue/15 text-ctp-blue" delay={210} />
       </div>
 
       {/* Shortcuts */}
@@ -221,8 +229,8 @@ export default function Dashboard() {
               <Icon name={s.icon} />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm leading-tight font-semibold text-ctp-text">{s.label}</span>
-              <span className="block text-xs leading-tight text-ctp-subtext0">{s.hint}</span>
+              <span className="block text-sm leading-tight font-semibold text-ctp-text">{t(s.label)}</span>
+              <span className="block text-xs leading-tight text-ctp-subtext0">{t(s.hint)}</span>
             </span>
           </Link>
         ))}
@@ -230,14 +238,14 @@ export default function Dashboard() {
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-5">
         <div className="space-y-4 sm:space-y-5 lg:col-span-3">
-          <Section title="Upcoming birthdays" to="/birthdays" delay={300}>
+          <Section title={t("dash.upcomingBirthdays")} to="/birthdays" delay={300}>
             {next.length === 0 ? (
               <p className="py-4 text-center text-sm text-ctp-subtext0">
-                Add birthdays to member profiles and they'll show up here.
+                {t("dash.noBirthdays")}
               </p>
             ) : (
               <ul className="-mx-2 divide-y divide-ctp-surface0/70">
-                {next.map(({ member, date, daysAway, turning }) => (
+                {next.map(({ member, date: birthdayDate, daysAway, turning }) => (
                   <li key={member.id}>
                     <Link
                       to={`/members/${member.id}`}
@@ -249,9 +257,9 @@ export default function Dashboard() {
                           {member.name}
                         </span>
                         <span className="block text-xs text-ctp-subtext0">
-                          {date.toLocaleDateString(undefined, { day: "numeric", month: "long", timeZone: "UTC" })}
-                          {" · turns "}
-                          {turning}
+                          {date(birthdayDate, { day: "numeric", month: "long", timeZone: "UTC" })}
+                          {" · "}
+                          {t("birthday.turns", { age: turning })}
                         </span>
                       </span>
                       <CountdownChip days={daysAway} />
@@ -262,18 +270,18 @@ export default function Dashboard() {
             )}
           </Section>
 
-          <Section title="Coming up" to="/calendar" delay={350}>
+          <Section title={t("dash.comingUp")} to="/calendar" delay={350}>
             {view.events.length === 0 ? (
               <p className="py-4 text-center text-sm text-ctp-subtext0">
-                Nothing planned yet.{" "}
+                {t("dash.nothingPlanned")}{" "}
                 <Link to="/calendar?new=1" className="font-semibold text-brand">
-                  Add a reunion
+                  {t("dash.addReunion")}
                 </Link>
               </p>
             ) : (
               <ul className="space-y-2.5">
                 {view.events.map((event) => {
-                  const { month, day } = eventDayParts(event);
+                  const { month, day } = eventDayParts(event, date);
                   return (
                     <li key={event.id} className="flex items-center gap-3">
                       <span className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-ctp-blue/12 text-ctp-blue">
@@ -298,8 +306,8 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-4 sm:space-y-5 lg:col-span-2">
-          <Section title="Family tree" to="/tree" linkLabel="Open" delay={320}>
-            <Link to="/tree" className="block rounded-xl transition hover:bg-ctp-surface0/40" aria-label="Open the family tree">
+          <Section title={t("dash.familyTree")} to="/tree" linkLabel={t("common.open")} delay={320}>
+            <Link to="/tree" className="block rounded-xl transition hover:bg-ctp-surface0/40" aria-label={t("dash.openTreeLabel")}>
               <ol className="relative space-y-3 py-1">
                 {view.ladder.slice(0, 5).map((people, i) => {
                   const shown = people.slice(0, 6);
@@ -307,7 +315,7 @@ export default function Dashboard() {
                   return (
                     <li key={i} className="flex items-center gap-3">
                       <span className="w-14 shrink-0 text-[11px] font-semibold tracking-wide text-ctp-overlay1 uppercase">
-                        Gen {i + 1}
+                        {t("dash.gen", { n: i + 1 })}
                       </span>
                       <span className="flex items-center -space-x-1.5">
                         {shown.map((m) => (
@@ -324,12 +332,12 @@ export default function Dashboard() {
                 })}
               </ol>
               {view.ladder.length > 5 && (
-                <p className="mt-2 text-xs text-ctp-overlay1">+ {view.ladder.length - 5} more generations</p>
+                <p className="mt-2 text-xs text-ctp-overlay1">{t("dash.moreGenerations", { count: view.ladder.length - 5 })}</p>
               )}
             </Link>
           </Section>
 
-          <Section title="Recently added" to="/contacts" linkLabel="All contacts" delay={370}>
+          <Section title={t("dash.recentlyAdded")} to="/contacts" linkLabel={t("dash.allContacts")} delay={370}>
             <ul className="-mx-2">
               {view.recent.map((m) => (
                 <li key={m.id}>
@@ -339,7 +347,7 @@ export default function Dashboard() {
                   >
                     <Avatar member={m} size={36} />
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ctp-text">{m.name}</span>
-                    <Chip>{addedLabel(m.createdAt)}</Chip>
+                    <Chip>{addedLabel(m.createdAt, i18n)}</Chip>
                   </Link>
                 </li>
               ))}

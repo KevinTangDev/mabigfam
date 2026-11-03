@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "../src/i18n/config";
 import { buildRelationIndex, relationshipLabels } from "../src/lib/relationships";
+
 import type { FamilyMember } from "../src/types";
+
+const t = createI18n("en").t;
 
 const person = (id: string, name: string): FamilyMember => ({
   id,
@@ -43,13 +47,13 @@ describe("relationships", () => {
   });
 
   it("builds short card labels", () => {
-    expect(relationshipLabels(index("kevin"))).toEqual(["Child of Hung & Mou"]);
-    expect(relationshipLabels(index("hung"))).toEqual(["Married to Mou", "3 children"]);
-    expect(relationshipLabels(index("half"))).toEqual(["Child of Hung"]);
+    expect(relationshipLabels(index("kevin"), t)).toEqual(["Child of Hung & Mou"]);
+    expect(relationshipLabels(index("hung"), t)).toEqual(["Married to Mou", "3 children"]);
+    expect(relationshipLabels(index("half"), t)).toEqual(["Child of Hung"]);
   });
 
   it("returns empty relations for someone unconnected", () => {
     const lone = buildRelationIndex({ members: [person("x", "Solo")], links: [], partnerships: [] })("x");
-    expect(relationshipLabels(lone)).toEqual([]);
+    expect(relationshipLabels(lone, t)).toEqual([]);
   });
 });

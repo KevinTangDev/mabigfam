@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { ExtNode } from "relatives-tree/lib/types";
+import { useI18n } from "../i18n/context";
 import Avatar from "./Avatar";
 import Icon from "./icons";
 import type { FamilyMember } from "../types";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function FamilyNodeCard({ node, member, isRoot, style, onSelect, onFocusTree }: Props) {
+  const { t } = useI18n();
   if (node.placeholder) {
     return (
       <div
@@ -24,7 +26,7 @@ export default function FamilyNodeCard({ node, member, isRoot, style, onSelect, 
     );
   }
 
-  const name = member?.name ?? "Unknown";
+  const name = member?.name ?? t("common.unknown");
   const year = member?.birthday ? new Date(member.birthday).getUTCFullYear() : null;
 
   return (
@@ -43,7 +45,7 @@ export default function FamilyNodeCard({ node, member, isRoot, style, onSelect, 
       <button
         type="button"
         onClick={() => onSelect(node.id)}
-        aria-label={`Open ${name}'s profile`}
+        aria-label={t("tree.openProfile", { name })}
         className="absolute inset-0 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-brand"
       />
 
@@ -54,7 +56,7 @@ export default function FamilyNodeCard({ node, member, isRoot, style, onSelect, 
         <span className="block truncate text-sm font-semibold text-ctp-text">{name}</span>
         {member?.nameZh && <span className="block truncate text-xs text-ctp-subtext0">{member.nameZh}</span>}
         {year !== null && (
-          <span className="mt-0.5 block text-[11px] font-medium text-ctp-overlay1">b. {year}</span>
+          <span className="mt-0.5 block text-[11px] font-medium text-ctp-overlay1">{t("tree.born", { year })}</span>
         )}
       </span>
 
@@ -62,8 +64,8 @@ export default function FamilyNodeCard({ node, member, isRoot, style, onSelect, 
         <button
           type="button"
           onClick={() => onFocusTree(node.id)}
-          aria-label={`View the tree from ${name}`}
-          title={`View the tree from ${name}`}
+          aria-label={t("tree.viewFrom", { name })}
+          title={t("tree.viewFrom", { name })}
           className="absolute -top-2 -right-2 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full
                      border border-ctp-surface1 bg-ctp-mantle text-ctp-subtext1 opacity-0 shadow-sm transition
                      group-hover:opacity-100 hover:text-brand focus-visible:opacity-100 pointer-coarse:opacity-100"

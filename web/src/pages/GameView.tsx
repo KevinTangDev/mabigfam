@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, photoUrl } from "../api/client";
+import { useI18n } from "../i18n/context";
 import Icon from "../components/icons";
 import { Button, EmptyState, Skeleton, cardClass } from "../components/ui";
 import type { FamilyMember } from "../types";
@@ -41,6 +42,7 @@ function makeQuestion(
 }
 
 export default function GameView() {
+  const { t } = useI18n();
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -77,19 +79,17 @@ export default function GameView() {
       <div className={cardClass}>
         <EmptyState
           icon="camera"
-          title="Not enough photos yet"
+          title={t("game.notEnough.title")}
           action={
             <Link
               to="/contacts"
               className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-sm hover:bg-brand-strong"
             >
-              Go to contacts
+              {t("game.goContacts")}
             </Link>
           }
         >
-          The guessing game needs at least {MIN_PLAYABLE} family members with photos — there
-          {photographed.length === 1 ? " is " : " are "}
-          {photographed.length} so far. Add photos from anyone's profile.
+          {t("game.notEnough", { min: MIN_PLAYABLE, count: photographed.length })}
         </EmptyState>
       </div>
     );
@@ -116,7 +116,7 @@ export default function GameView() {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-4 flex items-center gap-2.5">
-        <h2 className="text-2xl font-semibold text-ctp-text">Who's this?</h2>
+        <h2 className="text-2xl font-semibold text-ctp-text">{t("game.title")}</h2>
         <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-ctp-surface0 px-3 py-1 text-sm font-semibold text-ctp-text">
           <Icon name="check" className="size-3.5 text-ctp-green" />
           {score.right}/{score.asked}
@@ -127,7 +127,7 @@ export default function GameView() {
             {streak}
           </span>
         ) : (
-          best > 0 && <span className="text-sm font-semibold text-ctp-subtext0">best {best}</span>
+          best > 0 && <span className="text-sm font-semibold text-ctp-subtext0">{t("game.best", { n: best })}</span>
         )}
       </div>
 
@@ -135,7 +135,7 @@ export default function GameView() {
         <img
           key={question.answer.id}
           src={photoUrl(question.answer.photoPath!)}
-          alt="Guess who this is"
+          alt={t("game.alt")}
           className="page-enter aspect-[4/3] w-full sm:aspect-square bg-ctp-crust object-cover"
         />
 
@@ -169,8 +169,8 @@ export default function GameView() {
                   {option.name}
                   {option.nameZh && <span className="ml-2 font-normal opacity-70">{option.nameZh}</span>}
                 </span>
-                {answered && isAnswer && <Icon name="check" label="Correct answer" className="size-5" />}
-                {answered && isPicked && !isAnswer && <Icon name="x" label="Your guess" className="size-5" />}
+                {answered && isAnswer && <Icon name="check" label={t("game.correctAnswer")} className="size-5" />}
+                {answered && isPicked && !isAnswer && <Icon name="x" label={t("game.yourGuess")} className="size-5" />}
               </button>
             );
           })}
@@ -179,18 +179,18 @@ export default function GameView() {
         {answered && (
           <div className="rise-in border-t border-ctp-surface0 p-4">
             <p className={`text-sm font-semibold ${wasRight ? "text-ctp-green" : "text-ctp-subtext1"}`}>
-              {wasRight ? "Correct!" : `That was ${question.answer.name}.`}
+              {wasRight ? t("game.correct") : t("game.thatWas", { name: question.answer.name })}
             </p>
             <div className="mt-3 flex gap-2">
               <Button variant="primary" onClick={() => nextQuestion(question.answer.id)} autoFocus>
-                Next →
+                {t("game.next")}
               </Button>
               <Link
                 to={`/members/${question.answer.id}`}
                 className="inline-flex items-center rounded-xl border border-ctp-surface1 bg-ctp-mantle px-3.5 py-2 text-sm
                            font-semibold text-ctp-text shadow-sm transition hover:bg-ctp-surface0 pointer-coarse:min-h-11"
               >
-                See profile
+                {t("game.seeProfile")}
               </Link>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function GameView() {
       </div>
 
       <p className="mt-4 text-center text-xs text-ctp-overlay1">
-        {photographed.length} of {members.length} family members have photos
+        {t("game.havePhotos", { photos: photographed.length, total: members.length })}
       </p>
     </div>
   );

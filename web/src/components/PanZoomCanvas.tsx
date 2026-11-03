@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { useI18n } from "../i18n/context";
 import Icon from "./icons";
 
 const MIN_SCALE = 0.35;
@@ -42,6 +43,7 @@ export default function PanZoomCanvas({
   resetKey,
   children,
 }: Props) {
+  const { t, number } = useI18n();
   const scroller = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const scaleRef = useRef(1);
@@ -201,7 +203,7 @@ export default function PanZoomCanvas({
       <div
         ref={scroller}
         role="region"
-        aria-label="Family tree — drag to pan, pinch or use the buttons to zoom"
+        aria-label={t("tree.zoomRegion")}
         tabIndex={0}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
@@ -247,21 +249,21 @@ export default function PanZoomCanvas({
         className="absolute right-3 bottom-3 flex flex-col overflow-hidden rounded-xl border border-ctp-surface1
                    bg-ctp-mantle/95 shadow-pop backdrop-blur"
         role="group"
-        aria-label="Zoom controls"
+        aria-label={t("tree.zoomGroup")}
       >
-        <button className={controlClass} onClick={() => zoomTo(scaleRef.current * 1.25)} aria-label="Zoom in" disabled={scale >= MAX_SCALE}>
+        <button className={controlClass} onClick={() => zoomTo(scaleRef.current * 1.25)} aria-label={t("tree.zoomIn")} disabled={scale >= MAX_SCALE}>
           <Icon name="zoomIn" className="size-5" />
         </button>
-        <button className={`${controlClass} border-y border-ctp-surface0`} onClick={() => zoomTo(scaleRef.current / 1.25)} aria-label="Zoom out" disabled={scale <= MIN_SCALE}>
+        <button className={`${controlClass} border-y border-ctp-surface0`} onClick={() => zoomTo(scaleRef.current / 1.25)} aria-label={t("tree.zoomOut")} disabled={scale <= MIN_SCALE}>
           <Icon name="zoomOut" className="size-5" />
         </button>
-        <button className={controlClass} onClick={fit} aria-label="Fit the whole tree" title="Fit the whole tree">
+        <button className={controlClass} onClick={fit} aria-label={t("tree.fit")} title={t("tree.fit")}>
           <Icon name="maximize" className="size-5" />
         </button>
       </div>
 
       <div className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-ctp-mantle/90 px-2.5 py-1 text-xs font-semibold text-ctp-subtext1 shadow-sm backdrop-blur">
-        {Math.round(scale * 100)}%
+        {number(Math.round(scale * 100) / 100, { style: "percent" })}
       </div>
     </div>
   );

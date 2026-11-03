@@ -5,6 +5,7 @@ import Avatar from "../components/Avatar";
 import CountdownChip from "../components/CountdownChip";
 import Icon from "../components/icons";
 import { EmptyState, PageHeader, Skeleton, cardClass } from "../components/ui";
+import { useI18n } from "../i18n/context";
 import { upcomingBirthdays } from "../lib/birthdays";
 import type { UpcomingBirthday } from "../lib/birthdays";
 import type { FamilyMember } from "../types";
@@ -17,10 +18,8 @@ const CARD_TINTS = [
   "from-ctp-yellow/20 via-ctp-mantle to-ctp-mantle border-ctp-yellow/30",
 ];
 
-const longDate = (d: Date) =>
-  d.toLocaleDateString(undefined, { day: "numeric", month: "long", timeZone: "UTC" });
-
 function FeaturedCard({ b, index }: { b: UpcomingBirthday; index: number }) {
+  const { t, date } = useI18n();
   const today = b.daysAway === 0;
   return (
     <Link
@@ -34,14 +33,14 @@ function FeaturedCard({ b, index }: { b: UpcomingBirthday; index: number }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-semibold text-ctp-text">{b.member.name}</p>
           {b.member.nameZh && <p className="truncate text-sm text-ctp-subtext0">{b.member.nameZh}</p>}
-          <p className="mt-1 text-sm text-ctp-subtext1">{longDate(b.date)}</p>
+          <p className="mt-1 text-sm text-ctp-subtext1">{date(b.date, { day: "numeric", month: "long", timeZone: "UTC" })}</p>
         </div>
       </div>
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>
           <p className="font-display text-4xl leading-none font-semibold text-ctp-text">{b.turning}</p>
           <p className="mt-1 text-xs font-semibold tracking-wide text-ctp-subtext0 uppercase">
-            {today ? "years today" : "turning"}
+            {today ? t("bday.yearsToday") : t("bday.turning")}
           </p>
         </div>
         <CountdownChip days={b.daysAway} />
@@ -51,6 +50,7 @@ function FeaturedCard({ b, index }: { b: UpcomingBirthday; index: number }) {
 }
 
 function BirthdayRow({ b }: { b: UpcomingBirthday }) {
+  const { t, date } = useI18n();
   return (
     <li>
       <Link
@@ -59,14 +59,14 @@ function BirthdayRow({ b }: { b: UpcomingBirthday }) {
       >
         <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-xl bg-ctp-surface0 text-ctp-subtext1">
           <span className="text-[10px] leading-none font-bold tracking-wide uppercase">
-            {b.date.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" })}
+            {date(b.date, { month: "short", timeZone: "UTC" })}
           </span>
           <span className="font-display text-base leading-tight font-semibold">{b.date.getUTCDate()}</span>
         </span>
         <Avatar member={b.member} size={36} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ctp-text">{b.member.name}</span>
-          <span className="block text-xs text-ctp-subtext0">turns {b.turning}</span>
+          <span className="block text-xs text-ctp-subtext0">{t("birthday.turns", { age: b.turning })}</span>
         </span>
         <CountdownChip days={b.daysAway} />
       </Link>
@@ -76,6 +76,7 @@ function BirthdayRow({ b }: { b: UpcomingBirthday }) {
 
 /** A month grid with each day's birthday people shown as avatars. */
 function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
+  const { t, date } = useI18n();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
 
@@ -103,10 +104,10 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
     return map;
   }, [members, month, leapYear]);
 
-  const monthLabel = new Date(year, month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthLabel = date(new Date(year, month, 1), { month: "long", year: "numeric" });
   // 2024-01-01 was a Monday, so these come out Monday-first in the user's locale.
   const weekdays = Array.from({ length: 7 }, (_, i) =>
-    new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: "short" }),
+    date(new Date(2024, 0, 1 + i), { weekday: "short" }),
   );
   const isToday = (day: number) =>
     day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
@@ -129,18 +130,18 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
               onClick={() => setCursor({ year: now.getFullYear(), month: now.getMonth() })}
               className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-semibold text-brand hover:bg-brand/10"
             >
-              Today
+              {t("bday.today")}
             </button>
             {(
               [
-                [-1, "chevronLeft", "Previous month"],
-                [1, "chevronRight", "Next month"],
+                [-1, "chevronLeft", "bday.prevMonth"],
+                [1, "chevronRight", "bday.nextMonth"],
               ] as const
             ).map(([delta, icon, label]) => (
               <button
                 key={label}
                 onClick={() => shift(delta)}
-                aria-label={label}
+                aria-label={t(label)}
                 className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-ctp-subtext1 hover:bg-ctp-surface0 pointer-coarse:size-11"
               >
                 <Icon name={icon} />
@@ -176,7 +177,7 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
                 <span>{day}</span>
                 <span className="flex flex-wrap items-center justify-center -space-x-1.5">
                   {people.slice(0, 2).map((m) => (
-                    <Link key={m.id} to={`/members/${m.id}`} title={m.name} aria-label={`${m.name}'s birthday`}>
+                    <Link key={m.id} to={`/members/${m.id}`} title={m.name} aria-label={t("bday.birthdayOf", { name: m.name })}>
                       <Avatar member={m} size={24} />
                     </Link>
                   ))}
@@ -190,7 +191,7 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
 
       <div className={`${cardClass} mt-4 p-2`}>
         {monthPeople.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-ctp-subtext0">No birthdays in {monthLabel}.</p>
+          <p className="px-3 py-6 text-center text-sm text-ctp-subtext0">{t("bday.noneInMonth", { month: monthLabel })}</p>
         ) : (
           <ul>
             {monthPeople.flatMap(([day, people]) =>
@@ -204,7 +205,7 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
                     <Avatar member={m} size={36} />
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ctp-text">{m.name}</span>
                     <span className="text-xs text-ctp-subtext0">
-                      turns {year - new Date(m.birthday!).getUTCFullYear()}
+                      {t("birthday.turns", { age: year - new Date(m.birthday!).getUTCFullYear() })}
                     </span>
                   </Link>
                 </li>
@@ -218,6 +219,7 @@ function BirthdayCalendar({ members }: { members: FamilyMember[] }) {
 }
 
 export default function BirthdaysView() {
+  const { t, date, errorText } = useI18n();
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("list");
@@ -226,7 +228,9 @@ export default function BirthdaysView() {
     api
       .listMembers()
       .then(setMembers)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load birthdays"));
+      .catch((err) => setError(errorText(err, "bday.loadFailed")));
+    // errorText only changes with the language, which shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const upcoming = useMemo(() => upcomingBirthdays(members ?? []), [members]);
@@ -238,25 +242,25 @@ export default function BirthdaysView() {
   const groups = useMemo(() => {
     const out: { label: string; items: UpcomingBirthday[] }[] = [];
     for (const b of rest) {
-      const label = b.date.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+      const label = date(b.date, { month: "long", year: "numeric", timeZone: "UTC" });
       const last = out[out.length - 1];
       if (last?.label === label) last.items.push(b);
       else out.push({ label, items: [b] });
     }
     return out;
-  }, [rest]);
+  }, [rest, date]);
 
   return (
     <div>
       <PageHeader
-        title="Birthdays"
-        subtitle={members ? `${upcoming.length} on file` : "Loading..."}
+        title={t("bday.title")}
+        subtitle={members ? t("bday.onFile", { count: upcoming.length }) : t("common.loading")}
         actions={
-          <div role="group" aria-label="View" className="inline-flex rounded-xl border border-ctp-surface1 bg-ctp-mantle p-0.5">
+          <div role="group" aria-label={t("bday.viewAria")} className="inline-flex rounded-xl border border-ctp-surface1 bg-ctp-mantle p-0.5">
             {(
               [
-                ["list", "list", "List"],
-                ["calendar", "calendar", "Calendar"],
+                ["list", "list", "bday.list"],
+                ["calendar", "calendar", "bday.calendar"],
               ] as const
             ).map(([value, icon, label]) => (
               <button
@@ -269,7 +273,7 @@ export default function BirthdaysView() {
                 }
               >
                 <Icon name={icon} />
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -290,14 +294,14 @@ export default function BirthdaysView() {
         <div className={cardClass}>
           <EmptyState
             icon="cake"
-            title="No birthdays yet"
+            title={t("bday.empty.title")}
             action={
               <Link to="/contacts" className="text-sm font-semibold text-brand">
-                Open contacts
+                {t("bday.empty.cta")}
               </Link>
             }
           >
-            Add a birthday to anyone's profile and it will appear here, with a countdown.
+            {t("bday.empty.body")}
           </EmptyState>
         </div>
       )}
@@ -327,7 +331,7 @@ export default function BirthdaysView() {
 
       {members && missing > 0 && upcoming.length > 0 && (
         <p className="mt-6 text-center text-xs text-ctp-overlay1">
-          {missing} {missing === 1 ? "person has" : "people have"} no birthday on file yet.
+          {t("bday.missing", { count: missing })}
         </p>
       )}
     </div>
