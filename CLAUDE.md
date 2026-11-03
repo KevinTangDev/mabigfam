@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 mabigfam is a family-tree app for sharing member info, a genealogy tree, a
 shared calendar, and a photo-guessing game with an extended family. npm
 workspaces monorepo: `server/` (Fastify API + SQLite via Prisma) and `web/`
-(React + Vite, Tailwind 4 with a Catppuccin palette), sharing
+(React + Vite, Tailwind 4 with a warm custom palette), sharing
 `prisma/schema.prisma` at the root. See `README.md` for the full feature
 list, theming approach, and security/deployment notes — it's kept current
 and is the primary reference; this file covers what a first read of the code
@@ -242,6 +242,33 @@ pattern that lets the handler still append entries and clean up the temp
 snapshot file afterward. Deliberately not filtered by `ACTIVE_MEMBER`: this
 is a disaster-recovery snapshot, so it includes trashed members too.
 
+### Frontend design system (`web/`)
+
+- **Tokens** live in `web/src/index.css`. The `ctp-*` names are Catppuccin's *slot* names
+  (base = page, mantle = cards, crust = wells, surface0-2 = borders, overlay/subtext = muted
+  text) but the values are a custom palette (Linen light / Cocoa dark). `brand` is the
+  primary action colour — use `bg-brand text-on-brand`, not `ctp-blue`, for primary actions.
+  Hue tokens (blue, green, red ...) stay literal. Shadows are `shadow-card` / `shadow-pop`.
+- **Shared pieces**: `components/ui.tsx` (Button, `cardClass`, `inputClass`, `PageHeader`,
+  `Chip`, `EmptyState`, `Skeleton`), `components/icons.tsx` (inline SVG set — add a path
+  there rather than using emoji or a dependency), `Avatar`, `CountdownChip`.
+- **`selectClass`, not `inputClass w-auto`**: `inputClass` contains `w-full`, and Tailwind
+  can't reliably let a later `w-auto` beat it, so selects that should size to content use
+  `selectClass` (the same string without `w-full`).
+- **Touch**: hover-revealed actions also need `pointer-coarse:opacity-100` or they are
+  invisible on phones (Tailwind 4 only applies `hover:` where hover exists). Primary nav is a
+  bottom bar below `sm` (five items; Game is desktop-nav + dashboard shortcut only).
+- **Routes**: `/` is the dashboard, `/contacts` the member list (was `/`). The dashboard
+  shortcuts deep-link with `?new=1`, which Contacts and Calendar read to open their Add dialog.
+- **Tree canvas**: `components/PanZoomCanvas.tsx` owns scrolling/zoom (CSS transform on a
+  wrapper sized to the scaled content). Generation bands and partner badges are siblings of
+  `.tree-canvas`, never children — `react-family-tree` owns that div and the tests count its
+  direct `div`/`i` children as cards/connectors.
+- **Pure helpers with tests**: `lib/generations.ts` (partners share a generation),
+  `lib/birthdays.ts` (countdowns), `lib/relationships.ts` (parents/siblings/partners per member).
+- There is deliberately **no email field** on members, so contact quick actions are call,
+  message (`sms:`), directions and vCard only; adding email is a schema + API + export change.
+
 ### Module resolution in `server/`
 
 `tsconfig.json` uses `NodeNext`/`NodeNext` — relative imports need an
@@ -262,8 +289,8 @@ required by the module system, not a typo, throughout `server/src`.
   `vi.resetModules()` + a dynamic `import("../src/app.js")` to force a fresh
   module graph — a plain env var change after the fact won't affect an
   already-imported `config`.
-- **Web component tests** (one file per page under `web/test/`: `TreeView`,
-  `TrashView`, `TableView`, `MemberDetail`, `CalendarView`, `GameView`,
+- **Web component tests** (one file per page under `web/test/`: `Dashboard`, `ContactsView`,
+  `MemberDetail`, `BirthdaysView`, `TreeView`, `TrashView`, `CalendarView`, `GameView`,
   `LoginScreen`) don't use
   `@testing-library/react` — in this npm-workspaces layout it hoists to the
   root, where `react` isn't resolvable from, so it can't load. They use the

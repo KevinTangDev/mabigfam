@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import Icon from "./icons";
 import { Button, cardClass } from "./ui";
 
 interface Props {
@@ -40,8 +41,11 @@ export default function SubscribeCard({ onError }: Props) {
   }
 
   return (
-    <div className={`${cardClass} p-4`}>
-      <h3 className="text-sm font-semibold text-ctp-text">Subscribe in Google or Apple Calendar</h3>
+    <div className={`${cardClass} border-ctp-blue/25 bg-linear-to-br from-ctp-blue/10 via-ctp-mantle to-ctp-mantle p-4 sm:p-5`}>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ctp-text">
+        <Icon name="calendar" className="size-4 text-ctp-blue" />
+        Subscribe in Google or Apple Calendar
+      </h3>
       <p className="mt-1 text-sm text-ctp-subtext0">
         Subscribe once and every new event and birthday shows up automatically. In Google Calendar
         use <em>Other calendars → From URL</em>; on iPhone use{" "}
@@ -50,7 +54,7 @@ export default function SubscribeCard({ onError }: Props) {
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code
-          className="min-w-0 flex-1 truncate rounded-lg border border-ctp-surface0 bg-ctp-crust/50
+          className="min-w-0 flex-1 truncate rounded-xl border border-ctp-surface0 bg-ctp-crust/60
                      px-3 py-2 font-mono text-xs text-ctp-subtext1"
           title={revealed ? undefined : "Hidden — this URL is a secret"}
         >
@@ -65,7 +69,7 @@ export default function SubscribeCard({ onError }: Props) {
         </Button>
       </div>
 
-      <p className="mt-2 text-xs text-ctp-peach">
+      <p className="mt-3 text-xs text-ctp-peach">
         Treat this URL like a password — anyone who has it can read the family's events without
         signing in.
       </p>

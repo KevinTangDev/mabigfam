@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactFamilyTree from "react-family-tree";
 import calcTree from "relatives-tree";
 import type { ExtNode } from "relatives-tree/lib/types";
@@ -8,7 +8,10 @@ import { buildRelativesTreeNodes } from "../lib/buildRelativesTree";
 import { connectedComponent } from "../lib/connectedComponent";
 import { buildPartnerConnectors, type PartnerConnector } from "../lib/partnerConnectors";
 import FamilyNodeCard from "../components/FamilyNodeCard";
-import { cardClass, inputClass } from "../components/ui";
+import Icon from "../components/icons";
+import type { IconName } from "../components/icons";
+import PanZoomCanvas from "../components/PanZoomCanvas";
+import { EmptyState, PageHeader, Skeleton, cardClass, selectClass } from "../components/ui";
 import type { FamilyMember, TreeData } from "../types";
 
 /**
@@ -19,9 +22,9 @@ import type { FamilyMember, TreeData } from "../types";
  * So the cell is deliberately larger than the card: the difference is the
  * gutter, and the connectors show through it as the ancestry lines.
  */
-const CELL_WIDTH = 220;
+const CELL_WIDTH = 252;
 const CELL_HEIGHT = 140;
-const CARD_GUTTER_X = 26;
+const CARD_GUTTER_X = 24;
 const CARD_GUTTER_Y = 34;
 
 const CARD_WIDTH = CELL_WIDTH - CARD_GUTTER_X * 2;
@@ -35,28 +38,28 @@ function cellCenter(units: number, cell: number): number {
 
 const PARTNER_BADGE: Record<
   PartnerConnector["status"],
-  { icon: string; legend: string; tooltip: string; className: string }
+  { icon: IconName; legend: string; tooltip: string; className: string }
 > = {
   married: {
-    icon: "💍",
+    icon: "heart",
     legend: "Married",
     tooltip: "Married",
-    className: "border-ctp-pink bg-ctp-pink/15",
+    className: "border-ctp-pink bg-ctp-mantle text-ctp-pink",
   },
   partner: {
-    icon: "🤝",
+    icon: "users",
     legend: "Partner",
     tooltip: "Partner",
-    className: "border-ctp-blue bg-ctp-blue/15",
+    className: "border-ctp-blue bg-ctp-mantle text-ctp-blue",
   },
   divorced: {
-    icon: "💔",
+    icon: "heartCrack",
     legend: "Divorced",
     tooltip: "Divorced",
-    className: "border-dashed border-ctp-red bg-ctp-red/15",
+    className: "border-dashed border-ctp-red bg-ctp-mantle text-ctp-red",
   },
   inferred: {
-    icon: "•",
+    icon: "link",
     legend: "Assumed",
     tooltip: "Assumed partners — share a child, no partnership recorded",
     className: "border-dashed border-ctp-overlay0 bg-ctp-surface0 text-ctp-overlay1",
@@ -67,17 +70,21 @@ export default function TreeView() {
   const { rootId: rootIdParam } = useParams<{ rootId?: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<TreeData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [rootId, setRootId] = useState<string>(rootIdParam ?? "");
 
   useEffect(() => {
-    api.getTree().then((tree) => {
-      setData(tree);
-      if (!rootIdParam && tree.members.length > 0) {
-        // Default to a member with no recorded parents (a "founder"), else the first.
-        const founder = tree.members.find((m) => !tree.links.some((l) => l.childId === m.id));
-        setRootId((founder ?? tree.members[0]).id);
-      }
-    });
+    api
+      .getTree()
+      .then((tree) => {
+        setData(tree);
+        if (!rootIdParam && tree.members.length > 0) {
+          // Default to a member with no recorded parents (a "founder"), else the first.
+          const founder = tree.members.find((m) => !tree.links.some((l) => l.childId === m.id));
+          setRootId((founder ?? tree.members[0]).id);
+        }
+      })
+      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load the tree"));
   }, [rootIdParam]);
 
   useEffect(() => {
@@ -132,14 +139,17 @@ export default function TreeView() {
   const layout = useMemo(() => {
     if (!rootId || componentNodes.length === 0) return null;
     try {
+      const result = calcTree(componentNodes, { rootId });
       return {
-        nodes: calcTree(componentNodes, { rootId }).nodes,
+        nodes: result.nodes,
+        canvas: result.canvas,
         error: null as string | null,
         detail: null as string | null,
       };
     } catch (err) {
       return {
         nodes: [],
+        canvas: { width: 0, height: 0 },
         error: err instanceof Error ? err.message : "The tree layout failed unexpectedly.",
         // The stack (when the engine provides one) is what would actually let
         // this be tracked down if it recurs — the bare message alone doesn't
@@ -163,29 +173,50 @@ export default function TreeView() {
     return buildPartnerConnectors(layout.nodes, data?.partnerships ?? []);
   }, [layout, data]);
 
-  if (!data) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
+  // One horizontal band per generation row, oldest at the top.
+  const generationRows = useMemo(() => {
+    if (!layout || layout.error) return [];
+    return [...new Set(layout.nodes.map((n) => n.top))].sort((a, b) => a - b);
+  }, [layout]);
+
+  if (loadError) return <p className="text-sm text-ctp-red">{loadError}</p>;
+
+  if (!data) {
+    return <Skeleton className="h-[28rem]" />;
+  }
 
   if (data.members.length === 0) {
     return (
-      <div className={`${cardClass} p-10 text-center text-sm text-ctp-subtext0`}>
-        No family members yet. Add some in the Table view first.
+      <div className={cardClass}>
+        <EmptyState icon="tree" title="No family members yet">
+          Add some in the Contacts page first, then link parents and children to grow the tree.
+        </EmptyState>
       </div>
     );
   }
 
   if (!rootId || !nodes.some((n) => n.id === rootId)) {
-    return <p className="text-sm text-ctp-subtext0">Loading...</p>;
+    return <Skeleton className="h-[28rem]" />;
   }
+
+  const rootNode = layout?.nodes.find((n) => n.id === rootId);
+  const contentWidth = (layout?.canvas.width ?? 0) * (CELL_WIDTH / 2);
+  const contentHeight = (layout?.canvas.height ?? 0) * (CELL_HEIGHT / 2);
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-ctp-subtext0">
+      <PageHeader
+        title="Family tree"
+        subtitle="Tap anyone to open their profile. Drag to pan, pinch or use the buttons to zoom."
+      />
+
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2.5">
+        <label className="flex items-center gap-2.5 text-sm font-semibold text-ctp-subtext1">
           Viewing from
           <select
             value={rootId}
             onChange={(e) => navigate(`/tree/${e.target.value}`)}
-            className={`${inputClass} max-w-xs`}
+            className={`${selectClass} max-w-[14rem] sm:max-w-xs`}
           >
             {data.members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -194,11 +225,16 @@ export default function TreeView() {
             ))}
           </select>
         </label>
-        <span className="text-xs text-ctp-overlay1">Click anyone to open their profile</span>
-        <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ctp-overlay1">
+
+        <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs font-medium text-ctp-subtext0 sm:ml-auto">
           {Object.values(PARTNER_BADGE).map((badge) => (
-            <span key={badge.legend} className="flex items-center gap-1">
-              <span aria-hidden="true">{badge.icon}</span>
+            <span key={badge.legend} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className={`flex size-5 items-center justify-center rounded-full border ${badge.className}`}
+              >
+                <Icon name={badge.icon} className="size-3" />
+              </span>
               {badge.legend}
             </span>
           ))}
@@ -218,7 +254,7 @@ export default function TreeView() {
             group), it may be stale code left over from a page that's been open a long time —{" "}
             <button
               onClick={() => window.location.reload()}
-              className="cursor-pointer font-medium text-ctp-blue underline underline-offset-2"
+              className="cursor-pointer font-medium text-brand underline underline-offset-2"
             >
               reload the page
             </button>{" "}
@@ -257,7 +293,7 @@ export default function TreeView() {
                   onClick={() => navigate(`/tree/${m.id}`)}
                   className="cursor-pointer rounded-full border border-ctp-surface1 bg-ctp-surface0
                              px-2.5 py-1 text-xs font-medium text-ctp-text transition
-                             hover:border-ctp-blue"
+                             hover:border-brand"
                   title={`View the tree from ${m.name}`}
                 >
                   {m.name}
@@ -269,8 +305,33 @@ export default function TreeView() {
       )}
 
       {!layout?.error && (
-        <div className={`${cardClass} max-h-[75vh] overflow-auto p-6`}>
-          <div className="relative inline-block">
+        <PanZoomCanvas
+          contentWidth={contentWidth}
+          contentHeight={contentHeight}
+          focusX={rootNode ? cellCenter(rootNode.left, CELL_WIDTH) : contentWidth / 2}
+          focusY={rootNode ? cellCenter(rootNode.top, CELL_HEIGHT) : contentHeight / 2}
+          resetKey={rootId}
+        >
+          <div className="relative" style={{ width: contentWidth, height: contentHeight }}>
+            {/*
+              Soft horizontal bands, one per generation, so the rows read as
+              generations at a glance. Deliberately a sibling of the tree
+              canvas (not a child): react-family-tree owns that div's children.
+            */}
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+              {generationRows.map((top, i) => (
+                <div
+                  key={top}
+                  className={`absolute inset-x-0 rounded-2xl ${i % 2 === 0 ? "bg-ctp-surface0/35" : "bg-ctp-surface0/15"}`}
+                  style={{ top: top * (CELL_HEIGHT / 2) + 6, height: CELL_HEIGHT - 12 }}
+                >
+                  <span className="absolute top-1.5 left-3 text-[10px] font-bold tracking-wider text-ctp-overlay1 uppercase">
+                    Generation {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             <ReactFamilyTree
               nodes={componentNodes}
               rootId={rootId}
@@ -284,6 +345,7 @@ export default function TreeView() {
                   member={memberById.get(node.id)}
                   isRoot={node.id === rootId}
                   onSelect={(id) => navigate(`/members/${id}`)}
+                  onFocusTree={(id) => navigate(`/tree/${id}`)}
                   style={{
                     width: CARD_WIDTH,
                     height: CARD_HEIGHT,
@@ -320,22 +382,29 @@ export default function TreeView() {
                     role="img"
                     aria-label={title}
                     title={title}
-                    className={`pointer-events-auto absolute flex h-5 w-5 -translate-x-1/2
-                                -translate-y-1/2 items-center justify-center rounded-full border
-                                text-[11px] leading-none shadow-sm ${badge.className}`}
+                    className={`pointer-events-auto absolute flex size-7 -translate-x-1/2
+                                -translate-y-1/2 items-center justify-center rounded-full border-2
+                                shadow-card ${badge.className}`}
                     style={{
                       left: cellCenter(connector.x, CELL_WIDTH),
                       top: cellCenter(connector.y, CELL_HEIGHT),
                     }}
                   >
-                    {badge.icon}
+                    <Icon name={badge.icon} className="size-3.5" />
                   </span>
                 );
               })}
             </div>
           </div>
-        </div>
+        </PanZoomCanvas>
       )}
+
+      <p className="mt-3 text-center text-xs text-ctp-overlay1">
+        <Link to="/contacts" className="font-semibold text-brand">
+          Manage relationships
+        </Link>{" "}
+        from a person's profile — add parents, children and partners there.
+      </p>
     </div>
   );
 }

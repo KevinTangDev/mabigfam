@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import Avatar from "./Avatar";
-import { Button } from "./ui";
+import Icon from "./icons";
 import type { FamilyMember } from "../types";
 
 interface Props {
@@ -41,11 +41,12 @@ export default function PhotoUploader({ member, onChange }: Props) {
     }
   }
 
-  return (
-    <div className="flex items-center gap-4">
-      <Avatar member={member} size={88} />
+  const label = member.photoPath ? "Replace photo" : "Add photo";
 
-      <div className="flex flex-wrap items-center gap-2">
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative">
+        <Avatar member={member} size={104} />
         <input
           ref={inputRef}
           type="file"
@@ -53,16 +54,31 @@ export default function PhotoUploader({ member, onChange }: Props) {
           hidden
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
-        <Button type="button" onClick={() => inputRef.current?.click()} disabled={busy}>
-          {busy ? "Working..." : member.photoPath ? "Replace photo" : "Add photo"}
-        </Button>
-        {member.photoPath && (
-          <Button type="button" variant="danger" onClick={handleRemove} disabled={busy}>
-            Remove
-          </Button>
-        )}
-        {error && <p className="basis-full text-sm text-ctp-red">{error}</p>}
+        {/* The camera badge is the one control: add when empty, replace when set. */}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy}
+          aria-label={label}
+          title={label}
+          className="absolute -right-1 -bottom-1 flex size-9 cursor-pointer items-center justify-center rounded-full
+                     bg-brand text-on-brand shadow-card ring-4 ring-ctp-mantle transition hover:bg-brand-strong
+                     disabled:cursor-wait disabled:opacity-60 pointer-coarse:size-11"
+        >
+          <Icon name="camera" className="size-4" />
+        </button>
       </div>
+      {busy && <p className="text-xs text-ctp-subtext0">Working...</p>}
+      {member.photoPath && !busy && (
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="cursor-pointer text-xs font-semibold text-ctp-subtext0 transition hover:text-ctp-red"
+        >
+          Remove photo
+        </button>
+      )}
+      {error && <p className="max-w-40 text-center text-xs text-ctp-red">{error}</p>}
     </div>
   );
 }
