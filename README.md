@@ -17,15 +17,22 @@ handle the multi-parent layout case a plain recursive tree struggles with).
   members, photo upload/serving, parent/child link management (with cycle
   prevention), and routes that resolve a member's (or the whole tree's)
   relations for the UI.
-- [`web/`](web) — Vite + React frontend, styled with Tailwind CSS 4 and the
-  [Catppuccin](https://catppuccin.com) palette (Latte / Mocha). Login gate,
-  table view, member detail view (edit fields, photo, manage parent/child
-  links), and tree view.
+- [`web/`](web) — Vite + React frontend, styled with Tailwind CSS 4 and a
+  warm custom palette (Linen / Cocoa) with self-hosted Fraunces + Plus Jakarta
+  Sans type. Login gate, a family dashboard, contacts (cards or table), contact
+  detail pages, a birthdays page (list + month calendar), a pan-and-zoom tree,
+  the calendar, and the guessing game. Mobile-first: bottom tab bar, bottom-sheet
+  dialogs, touch-sized controls.
 
 ## Theming
 
-Light is Catppuccin **Latte**, dark is **Mocha**, toggled from the header and
-remembered in `localStorage` (first visit follows the OS preference). An
+Light is **Linen** (cream and terracotta), dark is **Cocoa** (warm espresso),
+toggled from the header and remembered in `localStorage` (first visit follows
+the OS preference). The slot names (`base`, `mantle`, `surface0-2`, `overlay0-2`,
+hues) are Catppuccin's, kept so the `ctp-*` utilities everywhere keep working;
+the values are our own, plus a `brand` token for primary actions. Headings use
+Fraunces and body text Plus Jakarta Sans, both bundled with `@fontsource-variable`
+(no CDN request). An
 inline script in [`web/index.html`](web/index.html) applies the flavor before
 first paint so dark-mode users don't get a white flash.
 
@@ -51,6 +58,18 @@ Against the original brief, these are still to come:
 
 Everything from the original brief is now built.
 
+## Pages
+
+| Route | What it is |
+| --- | --- |
+| `/` | Dashboard: stats, today's birthdays, upcoming birthdays and events, tree preview, recently added, shortcuts |
+| `/contacts` | Contact cards (or the table) with search, sort, quick filters, call/message links, Trash, Export. `?new=1` opens Add member |
+| `/members/:id` | Contact detail: quick actions, info, partners/parents/children/siblings, previous/next contact |
+| `/tree`, `/tree/:rootId` | Family tree with generation bands, partner badges, pan, zoom (buttons, keys, Ctrl/⌘+wheel, pinch) and fit-to-screen |
+| `/birthdays` | Featured next birthdays with countdowns, month-grouped list, month calendar |
+| `/calendar` | Events and the subscribable feed. `?new=1` opens Add event |
+| `/game`, `/trash` | Photo guessing game; Trash |
+
 ## Trash
 
 Deleting a member from the table or their profile is a **soft delete** —
@@ -66,7 +85,7 @@ being missed.
 
 ## Exports
 
-From the table view's **Export** menu:
+From the Contacts page's **Export** menu:
 
 - **CSV** for spreadsheets, with parent/child names resolved. Carries a UTF-8
   BOM so Excel on Windows doesn't mangle Chinese names.

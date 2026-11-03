@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, downloadFile } from "../api/client";
 import EventFormModal from "../components/EventFormModal";
 import SubscribeCard from "../components/SubscribeCard";
 import Icon from "../components/icons";
-import { Button, cardClass } from "../components/ui";
-import { googleCalendarUrl, nextBirthday, turningAge } from "../lib/calendarLinks";
+import Avatar from "../components/Avatar";
+import CountdownChip from "../components/CountdownChip";
+import { Button, PageHeader, Skeleton, cardClass } from "../components/ui";
+import { upcomingBirthdays } from "../lib/birthdays";
+import { googleCalendarUrl } from "../lib/calendarLinks";
+import { eventDayParts } from "../lib/dateParts";
 import type { FamilyEvent, FamilyMember } from "../types";
 
 function formatWhen(event: FamilyEvent): string {
@@ -56,11 +61,18 @@ function EventCard({
   onDelete: () => void;
   onError: (message: string) => void;
 }) {
+  const { month, day } = eventDayParts(event);
+
   return (
-    <li className={`${cardClass} group flex flex-wrap items-start gap-3 p-4`}>
-      <div className="min-w-0 flex-1">
+    <li className={`${cardClass} group flex flex-wrap items-start gap-x-4 gap-y-3 p-4`}>
+      <span className="flex size-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-ctp-blue/12 text-ctp-blue">
+        <span className="text-[10px] leading-none font-bold tracking-wide uppercase">{month}</span>
+        <span className="font-display text-xl leading-tight font-semibold">{day}</span>
+      </span>
+
+      <div className="min-w-0 flex-1 basis-48">
         <h3 className="font-semibold text-ctp-text">{event.title}</h3>
-        <p className="mt-0.5 text-sm text-ctp-blue">{formatWhen(event)}</p>
+        <p className="mt-0.5 text-sm font-medium text-ctp-blue">{formatWhen(event)}</p>
         {event.location && (
           <p className="mt-1 flex items-center gap-1.5 text-sm text-ctp-subtext1">
             <Icon name="pin" className="size-3.5 text-ctp-overlay1" />
@@ -68,9 +80,7 @@ function EventCard({
           </p>
         )}
         {event.description && (
-          <p className="mt-1 whitespace-pre-wrap text-sm text-ctp-subtext0">
-            {event.description}
-          </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-ctp-subtext0">{event.description}</p>
         )}
       </div>
 
@@ -79,8 +89,9 @@ function EventCard({
           href={googleCalendarUrl(event)}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center rounded-lg border border-ctp-surface1 bg-ctp-surface0
-                     px-3 py-1.5 text-sm font-medium text-ctp-text transition hover:bg-ctp-surface1"
+          className="inline-flex items-center rounded-xl border border-ctp-surface1 bg-ctp-mantle
+                     px-3.5 py-2 text-sm font-semibold text-ctp-text shadow-sm transition
+                     hover:bg-ctp-surface0 pointer-coarse:min-h-11"
         >
           Google
         </a>
@@ -114,7 +125,9 @@ export default function CalendarView() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The dashboard's "Plan an event" shortcut lands here with ?new=1.
+  const [showCreate, setShowCreate] = useState(searchParams.get("new") === "1");
   const [editing, setEditing] = useState<FamilyEvent | null>(null);
 
   async function load() {
@@ -145,16 +158,12 @@ export default function CalendarView() {
     };
   }, [events]);
 
-  const birthdays = useMemo(() => {
-    return members
-      .filter((m) => m.birthday)
-      .map((m) => {
-        const occurrence = nextBirthday(m.birthday!);
-        return { member: m, occurrence, age: turningAge(m.birthday!, occurrence) };
-      })
-      .sort((a, b) => a.occurrence.getTime() - b.occurrence.getTime())
-      .slice(0, 5);
-  }, [members]);
+  const birthdays = useMemo(() => upcomingBirthdays(members).slice(0, 5), [members]);
+
+  function closeCreate() {
+    setShowCreate(false);
+    if (searchParams.has("new")) setSearchParams({}, { replace: true });
+  }
 
   async function handleDelete(event: FamilyEvent) {
     if (!confirm(`Delete "${event.title}"?`)) return;
@@ -164,29 +173,36 @@ export default function CalendarView() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-semibold text-ctp-text">Family calendar</h2>
-        <Button variant="primary" onClick={() => setShowCreate(true)} className="ml-auto">
-          <Icon name="plus" />
-          Add event
-        </Button>
-      </div>
+      <PageHeader
+        title="Calendar"
+        subtitle="Reunions and important dates, shared with the whole family."
+        actions={
+          <Button variant="primary" onClick={() => setShowCreate(true)}>
+            <Icon name="plus" />
+            Add event
+          </Button>
+        }
+      />
 
       <SubscribeCard onError={setError} />
 
       {error && <p className="mt-3 text-sm text-ctp-red">{error}</p>}
 
       {loading ? (
-        <p className="mt-4 text-sm text-ctp-subtext0">Loading...</p>
+        <div className="mt-6 space-y-3" aria-busy="true">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
       ) : (
         <>
-          <section className="mt-6">
-            <h3 className="mb-2 text-xs font-semibold tracking-wide text-ctp-subtext0 uppercase">
-              Upcoming
-            </h3>
+          <section className="mt-8">
+            <h3 className="mb-3 text-xs font-bold tracking-wide text-ctp-subtext0 uppercase">Upcoming</h3>
             {upcoming.length === 0 ? (
-              <div className={`${cardClass} p-6 text-center text-sm text-ctp-subtext0`}>
-                Nothing planned yet. Add a reunion or an important date.
+              <div className={`${cardClass} flex flex-col items-center px-6 py-10 text-center`}>
+                <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-ctp-blue/12 text-ctp-blue">
+                  <Icon name="calendar" className="size-6" />
+                </span>
+                <p className="text-sm text-ctp-subtext0">Nothing planned yet. Add a reunion or an important date.</p>
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
@@ -204,30 +220,30 @@ export default function CalendarView() {
           </section>
 
           {birthdays.length > 0 && (
-            <section className="mt-6">
-              <h3 className="mb-2 text-xs font-semibold tracking-wide text-ctp-subtext0 uppercase">
-                Next birthdays
-              </h3>
-              <ul className={`${cardClass} divide-y divide-ctp-surface0`}>
-                {birthdays.map(({ member, occurrence, age }) => (
-                  <li key={member.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <Icon name="cake" className="size-4 text-ctp-pink" />
-                    <span className="font-medium text-ctp-text">{member.name}</span>
-                    {member.nameZh && (
-                      <span className="text-ctp-subtext0">{member.nameZh}</span>
-                    )}
-                    <span className="ml-auto text-ctp-subtext1">
-                      {occurrence.toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        timeZone: "UTC",
-                      })}
-                      <span className="ml-2 text-ctp-overlay1">turns {age}</span>
+            <section className="mt-8">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-xs font-bold tracking-wide text-ctp-subtext0 uppercase">Next birthdays</h3>
+                <Link to="/birthdays" className="text-sm font-semibold text-brand hover:text-brand-strong">
+                  See all
+                </Link>
+              </div>
+              <ul className={`${cardClass} divide-y divide-ctp-surface0/70 p-1`}>
+                {birthdays.map(({ member, date, daysAway, turning }) => (
+                  <li key={member.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                    <Avatar member={member} size={36} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-ctp-text">{member.name}</span>
+                      <span className="block text-xs text-ctp-subtext0">
+                        {date.toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" })}
+                        {" · turns "}
+                        {turning}
+                      </span>
                     </span>
+                    <CountdownChip days={daysAway} />
                   </li>
                 ))}
               </ul>
-              <p className="mt-1.5 text-xs text-ctp-overlay1">
+              <p className="mt-2 text-xs text-ctp-overlay1">
                 Birthdays come from each member's profile and are included in the calendar feed
                 automatically.
               </p>
@@ -235,10 +251,8 @@ export default function CalendarView() {
           )}
 
           {past.length > 0 && (
-            <section className="mt-6">
-              <h3 className="mb-2 text-xs font-semibold tracking-wide text-ctp-subtext0 uppercase">
-                Past
-              </h3>
+            <section className="mt-8">
+              <h3 className="mb-3 text-xs font-bold tracking-wide text-ctp-subtext0 uppercase">Past</h3>
               <ul className="flex flex-col gap-3 opacity-70">
                 {past.map((event) => (
                   <EventCard
@@ -258,10 +272,10 @@ export default function CalendarView() {
       {showCreate && (
         <EventFormModal
           title="Add event"
-          onClose={() => setShowCreate(false)}
+          onClose={closeCreate}
           onSubmit={async (data) => {
             await api.createEvent(data);
-            setShowCreate(false);
+            closeCreate();
             load();
           }}
         />

@@ -160,7 +160,7 @@ describe("MemberDetail", () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it("moves to Trash and navigates home once confirmed", async () => {
+  it("moves to Trash and returns to contacts once confirmed", async () => {
     getMemberRelations.mockResolvedValue(relations());
     vi.spyOn(window, "confirm").mockReturnValue(true);
     deleteMember.mockResolvedValue(undefined);
@@ -172,6 +172,6 @@ describe("MemberDetail", () => {
     await settle();
 
     expect(deleteMember).toHaveBeenCalledWith("kevin");
-    expect(navigateSpy).toHaveBeenCalledWith("/");
+    expect(navigateSpy).toHaveBeenCalledWith("/contacts");
   });
 });

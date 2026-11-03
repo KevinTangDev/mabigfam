@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { mount, settle, unmount } from "./renderHelper";
 import type { FamilyEvent, FamilyMember } from "../src/types";
 
@@ -62,7 +63,11 @@ function member(id: string, name: string, birthday: string | null): FamilyMember
 
 async function renderCalendar() {
   const { default: CalendarView } = await import("../src/pages/CalendarView");
-  return mount(<CalendarView />);
+  return mount(
+    <MemoryRouter>
+      <CalendarView />
+    </MemoryRouter>,
+  );
 }
 
 beforeEach(() => {

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
-import { Button, cardClass, inputClass } from "./ui";
+import Icon from "./icons";
+import { Button, Chip, cardClass, inputClass } from "./ui";
 import type { FamilyMember } from "../types";
 
 export interface RelationEntry {
@@ -39,37 +40,39 @@ export default function RelationSection({
   const navigate = useNavigate();
 
   return (
-    <section className={`${cardClass} p-4`}>
-      <h3 className="text-sm font-semibold text-ctp-text">{heading}</h3>
+    <section className={`${cardClass} p-4 sm:p-5`}>
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-ctp-text">{heading}</h3>
+        {entries.length > 0 && <Chip>{entries.length}</Chip>}
+      </div>
 
-      <ul className="mt-2 divide-y divide-ctp-surface0">
+      <ul className="-mx-2 mt-2">
         {entries.map(({ member, badge }) => (
-          <li key={member.id} className="group flex items-center gap-3 py-2">
-            <Avatar member={member} size={30} />
+          <li
+            key={member.id}
+            className="group flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-ctp-surface0/50"
+          >
+            <Avatar member={member} size={36} />
             <button
               onClick={() => navigate(`/members/${member.id}`)}
-              className="cursor-pointer text-sm font-medium text-ctp-blue hover:underline"
+              className="min-w-0 cursor-pointer truncate text-left text-sm font-semibold text-ctp-text hover:text-brand"
             >
               {member.name}
             </button>
-            {badge && (
-              <span className="rounded-full bg-ctp-surface0 px-2 py-0.5 text-xs text-ctp-subtext0">
-                {badge}
-              </span>
-            )}
+            {badge && <Chip tone="pink">{badge}</Chip>}
             <Button
               variant="danger"
               onClick={() => onRemove(member.id)}
-              className="ml-auto opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+              className="ml-auto px-2.5 py-1 text-xs opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
             >
               Remove
             </Button>
           </li>
         ))}
-        {entries.length === 0 && <li className="py-2 text-sm text-ctp-subtext0">{emptyText}</li>}
+        {entries.length === 0 && <li className="px-2 py-2 text-sm text-ctp-subtext0">{emptyText}</li>}
       </ul>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-ctp-surface0 pt-3">
         <select
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
@@ -84,6 +87,7 @@ export default function RelationSection({
         </select>
         {extraControl}
         <Button onClick={onAdd} disabled={!value}>
+          <Icon name="plus" />
           Add
         </Button>
       </div>

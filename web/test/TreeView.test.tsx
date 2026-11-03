@@ -151,7 +151,7 @@ describe("TreeView", () => {
     const container = await renderTree(coupleWithTwoKids);
     const badge = container.querySelector('[aria-label*="Married"]');
     expect(badge).toBeTruthy();
-    expect(badge!.textContent).toContain("💍");
+    expect(badge!.querySelector("svg")).toBeTruthy();
   });
 
   it("badges a divorced couple differently from a married one", async () => {

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, photoUrl } from "../api/client";
-import { Button, cardClass } from "../components/ui";
 import Icon from "../components/icons";
+import { Button, EmptyState, Skeleton, cardClass } from "../components/ui";
 import type { FamilyMember } from "../types";
 
 /** Minimum photographed members needed for a question to have wrong answers. */
@@ -70,29 +70,32 @@ export default function GameView() {
     if (!question) nextQuestion();
   }, [question, nextQuestion]);
 
-  if (!members) return <p className="text-sm text-ctp-subtext0">Loading...</p>;
+  if (!members) return <Skeleton className="mx-auto h-96 max-w-md" />;
 
   if (photographed.length < MIN_PLAYABLE) {
     return (
-      <div className={`${cardClass} p-8 text-center`}>
-        <Icon name="camera" className="mx-auto size-10 text-ctp-overlay1" />
-        <h2 className="mt-3 text-lg font-semibold text-ctp-text">Not enough photos yet</h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-ctp-subtext0">
+      <div className={cardClass}>
+        <EmptyState
+          icon="camera"
+          title="Not enough photos yet"
+          action={
+            <Link
+              to="/contacts"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-sm hover:bg-brand-strong"
+            >
+              Go to contacts
+            </Link>
+          }
+        >
           The guessing game needs at least {MIN_PLAYABLE} family members with photos — there
           {photographed.length === 1 ? " is " : " are "}
           {photographed.length} so far. Add photos from anyone's profile.
-        </p>
-        <Link
-          to="/"
-          className="mt-4 inline-flex rounded-lg bg-ctp-blue px-3 py-1.5 text-sm font-medium text-ctp-base"
-        >
-          Go to the family table
-        </Link>
+        </EmptyState>
       </div>
     );
   }
 
-  if (!question) return <p className="text-sm text-ctp-subtext0">Dealing...</p>;
+  if (!question) return <Skeleton className="mx-auto h-96 max-w-md" />;
 
   const answered = picked !== null;
   const wasRight = picked === question.answer.id;
@@ -112,23 +115,20 @@ export default function GameView() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="mb-4 flex items-center gap-4 text-sm">
-        <h2 className="font-semibold text-ctp-text">Who's this?</h2>
-        <span className="ml-auto text-ctp-subtext0">
+      <div className="mb-4 flex items-center gap-2.5">
+        <h2 className="text-2xl font-semibold text-ctp-text">Who's this?</h2>
+        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-ctp-surface0 px-3 py-1 text-sm font-semibold text-ctp-text">
+          <Icon name="check" className="size-3.5 text-ctp-green" />
           {score.right}/{score.asked}
         </span>
-        <span className="text-ctp-peach">
-          {streak > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <Icon name="flame" className="size-4" />
-              {streak}
-            </span>
-          ) : best > 0 ? (
-            `best ${best}`
-          ) : (
-            ""
-          )}
-        </span>
+        {streak > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/12 px-3 py-1 text-sm font-semibold text-brand">
+            <Icon name="flame" className="size-4" />
+            {streak}
+          </span>
+        ) : (
+          best > 0 && <span className="text-sm font-semibold text-ctp-subtext0">best {best}</span>
+        )}
       </div>
 
       <div className={`${cardClass} overflow-hidden`}>
@@ -136,22 +136,22 @@ export default function GameView() {
           key={question.answer.id}
           src={photoUrl(question.answer.photoPath!)}
           alt="Guess who this is"
-          className="aspect-square w-full bg-ctp-crust object-cover"
+          className="page-enter aspect-[4/3] w-full sm:aspect-square bg-ctp-crust object-cover"
         />
 
-        <div className="flex flex-col gap-2 p-4">
-          {question.options.map((option) => {
+        <div className="flex flex-col gap-2.5 p-4">
+          {question.options.map((option, i) => {
             const isAnswer = option.id === question.answer.id;
             const isPicked = option.id === picked;
 
             // After answering, always show the right answer in green and a
             // wrong pick in red.
             const state = !answered
-              ? "border-ctp-surface1 bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-text"
+              ? "border-ctp-surface1 bg-ctp-mantle hover:border-brand/50 hover:bg-ctp-surface0/60 text-ctp-text"
               : isAnswer
-                ? "border-ctp-green bg-ctp-green/15 text-ctp-green"
+                ? "border-ctp-green bg-ctp-green/12 text-ctp-green"
                 : isPicked
-                  ? "border-ctp-red bg-ctp-red/15 text-ctp-red"
+                  ? "border-ctp-red bg-ctp-red/12 text-ctp-red"
                   : "border-ctp-surface0 bg-transparent text-ctp-overlay1";
 
             return (
@@ -159,23 +159,26 @@ export default function GameView() {
                 key={option.id}
                 onClick={() => choose(option.id)}
                 disabled={answered}
-                className={`cursor-pointer rounded-lg border px-3 py-2.5 text-left text-sm
-                            font-medium transition disabled:cursor-default ${state}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 px-3.5 py-3 text-left text-sm
+                            font-semibold transition pointer-coarse:min-h-14 disabled:cursor-default ${state}`}
               >
-                {option.name}
-                {option.nameZh && <span className="ml-2 opacity-70">{option.nameZh}</span>}
-                {answered && isAnswer && <Icon name="check" label="Correct answer" className="float-right size-4" />}
-                {answered && isPicked && !isAnswer && (
-                  <Icon name="x" label="Your guess" className="float-right size-4" />
-                )}
+                <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ctp-surface0/80 text-xs font-bold text-ctp-subtext1">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {option.name}
+                  {option.nameZh && <span className="ml-2 font-normal opacity-70">{option.nameZh}</span>}
+                </span>
+                {answered && isAnswer && <Icon name="check" label="Correct answer" className="size-5" />}
+                {answered && isPicked && !isAnswer && <Icon name="x" label="Your guess" className="size-5" />}
               </button>
             );
           })}
         </div>
 
         {answered && (
-          <div className="border-t border-ctp-surface0 p-4">
-            <p className="text-sm text-ctp-subtext1">
+          <div className="rise-in border-t border-ctp-surface0 p-4">
+            <p className={`text-sm font-semibold ${wasRight ? "text-ctp-green" : "text-ctp-subtext1"}`}>
               {wasRight ? "Correct!" : `That was ${question.answer.name}.`}
             </p>
             <div className="mt-3 flex gap-2">
@@ -184,9 +187,8 @@ export default function GameView() {
               </Button>
               <Link
                 to={`/members/${question.answer.id}`}
-                className="inline-flex items-center rounded-lg border border-ctp-surface1
-                           bg-ctp-surface0 px-3 py-1.5 text-sm font-medium text-ctp-text
-                           transition hover:bg-ctp-surface1"
+                className="inline-flex items-center rounded-xl border border-ctp-surface1 bg-ctp-mantle px-3.5 py-2 text-sm
+                           font-semibold text-ctp-text shadow-sm transition hover:bg-ctp-surface0 pointer-coarse:min-h-11"
               >
                 See profile
               </Link>
@@ -195,7 +197,7 @@ export default function GameView() {
         )}
       </div>
 
-      <p className="mt-3 text-center text-xs text-ctp-overlay1">
+      <p className="mt-4 text-center text-xs text-ctp-overlay1">
         {photographed.length} of {members.length} family members have photos
       </p>
     </div>

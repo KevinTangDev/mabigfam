@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import Avatar from "../components/Avatar";
-import { Button, cardClass } from "../components/ui";
+import { Button, EmptyState, PageHeader, Skeleton, cardClass } from "../components/ui";
 import Icon from "../components/icons";
 import type { FamilyMember } from "../types";
 
@@ -74,46 +74,45 @@ export default function TrashView() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-ctp-subtext0 hover:text-ctp-text">
-          <Icon name="arrowLeft" />
-          Back to family
-        </Link>
-      </div>
+      <Link
+        to="/contacts"
+        className="mb-3 -ml-1 inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-sm font-semibold text-ctp-subtext0 hover:text-ctp-text"
+      >
+        <Icon name="arrowLeft" />
+        Back to contacts
+      </Link>
 
-      <h2 className="text-lg font-semibold text-ctp-text">Trash</h2>
-      <p className="mt-1 text-sm text-ctp-subtext0">
-        Deleted family members land here first. Restore brings someone back with all their
-        relationships intact; permanently deleting removes them for good.
-      </p>
+      <PageHeader
+        title="Trash"
+        subtitle="Deleted family members land here first. Restore brings someone back with all their relationships intact; permanently deleting removes them for good."
+      />
 
-      {error && <p className="mt-3 text-sm text-ctp-red">{error}</p>}
+      {error && <p className="mb-3 text-sm text-ctp-red">{error}</p>}
 
-      <div className={`${cardClass} mt-4 overflow-hidden`}>
+      <div className={`${cardClass} overflow-hidden`}>
         {loading ? (
-          <p className="p-6 text-sm text-ctp-subtext0">Loading...</p>
+          <div className="space-y-2 p-4" aria-busy="true">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
         ) : members.length === 0 ? (
-          <p className="p-6 text-center text-sm text-ctp-subtext0">The trash is empty.</p>
+          <EmptyState icon="trash" title="The trash is empty">
+            Anyone you delete will wait here until you restore or permanently remove them.
+          </EmptyState>
         ) : (
           <ul className="divide-y divide-ctp-surface0">
             {members.map((m) => (
-              <li key={m.id} className="flex items-center gap-3 p-4">
-                <Avatar member={m} size={36} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-ctp-text">{m.name}</div>
-                  <div className="text-xs text-ctp-overlay1">
-                    Deleted {formatDeletedAt(m.deletedAt)}
-                  </div>
+              <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-3 p-4">
+                <Avatar member={m} size={44} />
+                <div className="min-w-0 flex-1 basis-40">
+                  <div className="truncate font-semibold text-ctp-text">{m.name}</div>
+                  <div className="text-xs text-ctp-subtext0">Deleted {formatDeletedAt(m.deletedAt)}</div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button onClick={() => handleRestore(m)} disabled={busyId === m.id}>
                     Restore
                   </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => handlePurge(m)}
-                    disabled={busyId === m.id}
-                  >
+                  <Button variant="danger" onClick={() => handlePurge(m)} disabled={busyId === m.id}>
                     Delete permanently
                   </Button>
                 </div>
