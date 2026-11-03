@@ -10,6 +10,8 @@ import MemberFormModal from "../components/MemberFormModal";
 import PhotoUploader from "../components/PhotoUploader";
 import RelationSection from "../components/RelationSection";
 import { Button, Chip, Skeleton, cardClass, selectClass } from "../components/ui";
+import { useI18n } from "../i18n/context";
+import type { BaseKey } from "../i18n/config";
 import { daysUntil } from "../lib/birthdays";
 import { nextBirthday, turningAge } from "../lib/calendarLinks";
 import { buildRelationIndex, relationshipLabels } from "../lib/relationships";
@@ -20,10 +22,10 @@ import type {
   PartnershipStatus,
 } from "../types";
 
-const STATUS_LABELS: Record<PartnershipStatus, string> = {
-  married: "Married",
-  partner: "Partner",
-  divorced: "Divorced",
+const STATUS_KEYS: Record<PartnershipStatus, BaseKey> = {
+  married: "status.married",
+  partner: "status.partner",
+  divorced: "status.divorced",
 };
 
 const digits = (phone: string) => phone.replace(/[^\d+]/g, "");
@@ -97,6 +99,7 @@ function InfoCard({ icon, label, children }: { icon: IconName; label: string; ch
 }
 
 export default function MemberDetail() {
+  const { t, date, errorText } = useI18n();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -174,14 +177,14 @@ export default function MemberDetail() {
       reset();
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add link");
+      setError(errorText(err, "detail.err.addLink"));
     }
   }
 
   async function removeLink(parentId: string, childId: string) {
     const linkId = links.find((l) => l.parentId === parentId && l.childId === childId)?.id;
     if (!linkId) {
-      setError("Couldn't find that link — try reloading the page.");
+      setError(t("detail.err.linkNotFound"));
       return;
     }
 
@@ -190,7 +193,7 @@ export default function MemberDetail() {
       await api.deleteLink(linkId);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove link");
+      setError(errorText(err, "detail.err.removeLink"));
     }
   }
 
@@ -202,7 +205,7 @@ export default function MemberDetail() {
       setNewPartnerId("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add partner");
+      setError(errorText(err, "detail.err.addPartner"));
     }
   }
 
@@ -215,29 +218,32 @@ export default function MemberDetail() {
       await api.deletePartnership(partnership.partnershipId);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove partner");
+      setError(errorText(err, "detail.err.removePartner"));
     }
   }
 
   async function handleDeleteMember() {
     if (!id || !member) return;
     // A soft delete — moves them to the Trash rather than losing anything.
-    if (!confirm(`Move ${member.name} to Trash? You can restore them anytime.`)) return;
+    if (!confirm(t("detail.confirmTrash", { name: member.name }))) return;
 
     try {
       await api.deleteMember(id);
       navigate("/contacts");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete member");
+      setError(errorText(err, "detail.err.delete"));
     }
   }
 
-  const labels = relationshipLabels({
-    parents: member.parents,
-    children: member.children,
-    siblings,
-    partners: member.partners.map((p) => ({ member: p.member, status: p.status })),
-  });
+  const labels = relationshipLabels(
+    {
+      parents: member.parents,
+      children: member.children,
+      siblings,
+      partners: member.partners.map((p) => ({ member: p.member, status: p.status })),
+    },
+    t,
+  );
 
   const occurrence = member.birthday ? nextBirthday(member.birthday) : null;
   const daysAway = occurrence ? daysUntil(occurrence) : null;
@@ -247,15 +253,15 @@ export default function MemberDetail() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <Button variant="ghost" onClick={() => navigate(-1)} className="-ml-3">
           <Icon name="arrowLeft" />
-          Back
+          {t("common.back")}
         </Button>
 
-        <nav aria-label="Other contacts" className="flex items-center gap-1">
+        <nav aria-label={t("detail.otherContacts")} className="flex items-center gap-1">
           {neighbours.prev ? (
             <Link
               to={`/members/${neighbours.prev.id}`}
-              title={`Previous: ${neighbours.prev.name}`}
-              aria-label={`Previous contact: ${neighbours.prev.name}`}
+              title={t("detail.previousTitle", { name: neighbours.prev.name })}
+              aria-label={t("detail.previous", { name: neighbours.prev.name })}
               className="inline-flex size-10 items-center justify-center rounded-xl text-ctp-subtext0 transition hover:bg-ctp-surface0 hover:text-ctp-text"
             >
               <Icon name="chevronLeft" className="size-5" />
@@ -266,8 +272,8 @@ export default function MemberDetail() {
           {neighbours.next && (
             <Link
               to={`/members/${neighbours.next.id}`}
-              title={`Next: ${neighbours.next.name}`}
-              aria-label={`Next contact: ${neighbours.next.name}`}
+              title={t("detail.nextTitle", { name: neighbours.next.name })}
+              aria-label={t("detail.next", { name: neighbours.next.name })}
               className="inline-flex size-10 items-center justify-center rounded-xl text-ctp-subtext0 transition hover:bg-ctp-surface0 hover:text-ctp-text"
             >
               <Icon name="chevronRight" className="size-5" />
@@ -304,11 +310,11 @@ export default function MemberDetail() {
             <div className="flex gap-2 sm:pt-4">
               <Button onClick={() => setShowEdit(true)}>
                 <Icon name="edit" />
-                Edit
+                {t("common.edit")}
               </Button>
               <Button variant="danger" onClick={handleDeleteMember}>
                 <Icon name="trash" />
-                Delete
+                {t("common.delete")}
               </Button>
             </div>
           </div>
@@ -318,19 +324,19 @@ export default function MemberDetail() {
       <div className="mt-4 grid grid-cols-4 gap-2.5 sm:gap-3">
         <ActionTile
           icon="phone"
-          label="Call"
+          label={t("detail.call")}
           tint="bg-ctp-green/15 text-ctp-green"
           href={member.phone ? `tel:${digits(member.phone)}` : undefined}
         />
         <ActionTile
           icon="message"
-          label="Message"
+          label={t("detail.message")}
           tint="bg-ctp-blue/15 text-ctp-blue"
           href={member.phone ? `sms:${digits(member.phone)}` : undefined}
         />
         <ActionTile
           icon="pin"
-          label="Directions"
+          label={t("detail.directions")}
           tint="bg-ctp-peach/15 text-ctp-peach"
           external
           href={
@@ -341,11 +347,11 @@ export default function MemberDetail() {
         />
         <ActionTile
           icon="download"
-          label="Save contact"
+          label={t("detail.save")}
           tint="bg-ctp-mauve/15 text-ctp-mauve"
           onClick={() =>
             downloadFile(`/members/${member.id}/vcard`, `${member.name}.vcf`).catch((err) =>
-              setError(err instanceof Error ? err.message : "Download failed"),
+              setError(errorText(err, "error.downloadFailed")),
             )
           }
         />
@@ -354,50 +360,45 @@ export default function MemberDetail() {
       {error && <p className="mt-3 text-sm text-ctp-red">{error}</p>}
 
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-        <InfoCard icon="cake" label="Birthday">
+        <InfoCard icon="cake" label={t("detail.birthday")}>
           {member.birthday && occurrence && daysAway !== null ? (
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>
-                {new Date(member.birthday).toLocaleDateString(undefined, {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                  timeZone: "UTC",
-                })}
+                {date(member.birthday, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
               </span>
-              <span className="text-ctp-subtext0">turns {turningAge(member.birthday, occurrence)}</span>
+              <span className="text-ctp-subtext0">{t("birthday.turns", { age: turningAge(member.birthday, occurrence) })}</span>
               <CountdownChip days={daysAway} />
             </span>
           ) : (
-            <span className="text-ctp-overlay1">Not added yet</span>
+            <span className="text-ctp-overlay1">{t("common.notAddedYet")}</span>
           )}
         </InfoCard>
-        <InfoCard icon="phone" label="Phone">
-          {member.phone ?? <span className="text-ctp-overlay1">Not added yet</span>}
+        <InfoCard icon="phone" label={t("detail.phone")}>
+          {member.phone ?? <span className="text-ctp-overlay1">{t("common.notAddedYet")}</span>}
         </InfoCard>
-        <InfoCard icon="pin" label="Address">
-          {member.address ?? <span className="text-ctp-overlay1">Not added yet</span>}
+        <InfoCard icon="pin" label={t("detail.address")}>
+          {member.address ?? <span className="text-ctp-overlay1">{t("common.notAddedYet")}</span>}
         </InfoCard>
-        <InfoCard icon="edit" label="Note">
+        <InfoCard icon="edit" label={t("detail.note")}>
           {member.note ? (
             <span className="whitespace-pre-wrap">{member.note}</span>
           ) : (
-            <span className="text-ctp-overlay1">Nothing yet</span>
+            <span className="text-ctp-overlay1">{t("common.nothingYet")}</span>
           )}
         </InfoCard>
       </dl>
 
-      <h3 className="mt-8 mb-3 text-lg font-semibold text-ctp-text">Family</h3>
+      <h3 className="mt-8 mb-3 text-lg font-semibold text-ctp-text">{t("detail.family")}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <RelationSection
-          heading="Partners"
+          heading={t("detail.partners")}
           entries={member.partners.map((p) => ({
             member: p.member,
-            badge: STATUS_LABELS[p.status],
+            badge: t(STATUS_KEYS[p.status]),
           }))}
           pickable={pickablePartners}
-          placeholder="Add a partner..."
-          emptyText="No partner recorded"
+          placeholder={t("detail.addPartner")}
+          emptyText={t("detail.noPartner")}
           value={newPartnerId}
           onValueChange={setNewPartnerId}
           onAdd={addPartner}
@@ -407,11 +408,11 @@ export default function MemberDetail() {
               value={newPartnerStatus}
               onChange={(e) => setNewPartnerStatus(e.target.value as PartnershipStatus)}
               className={selectClass}
-              aria-label="Relationship type"
+              aria-label={t("detail.relationshipType")}
             >
-              {(Object.keys(STATUS_LABELS) as PartnershipStatus[]).map((s) => (
+              {(Object.keys(STATUS_KEYS) as PartnershipStatus[]).map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
+                  {t(STATUS_KEYS[s])}
                 </option>
               ))}
             </select>
@@ -419,11 +420,11 @@ export default function MemberDetail() {
         />
 
         <RelationSection
-          heading="Parents"
+          heading={t("detail.parents")}
           entries={member.parents.map((m) => ({ member: m }))}
           pickable={pickableParents}
-          placeholder="Add someone as parent..."
-          emptyText="No parents linked yet"
+          placeholder={t("detail.addParent")}
+          emptyText={t("detail.noParents")}
           value={newParentId}
           onValueChange={setNewParentId}
           onAdd={() => addLink(newParentId, member.id, () => setNewParentId(""))}
@@ -431,11 +432,11 @@ export default function MemberDetail() {
         />
 
         <RelationSection
-          heading="Children"
+          heading={t("detail.children")}
           entries={member.children.map((m) => ({ member: m }))}
           pickable={pickableChildren}
-          placeholder="Add someone as child..."
-          emptyText="No children linked yet"
+          placeholder={t("detail.addChild")}
+          emptyText={t("detail.noChildren")}
           value={newChildId}
           onValueChange={setNewChildId}
           onAdd={() => addLink(member.id, newChildId, () => setNewChildId(""))}
@@ -445,7 +446,7 @@ export default function MemberDetail() {
         {siblings.length > 0 && (
           <section className={`${cardClass} p-4 sm:p-5`}>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-ctp-text">Siblings</h3>
+              <h3 className="text-sm font-semibold text-ctp-text">{t("detail.siblings")}</h3>
               <Chip>{siblings.length}</Chip>
             </div>
             <ul className="mt-3 flex flex-wrap gap-2">
@@ -461,14 +462,14 @@ export default function MemberDetail() {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-ctp-overlay1">Anyone sharing a parent. Edit via Parents.</p>
+            <p className="mt-3 text-xs text-ctp-overlay1">{t("detail.siblingsNote")}</p>
           </section>
         )}
       </div>
 
       {showEdit && (
         <MemberFormModal
-          title="Edit family member"
+          title={t("detail.editTitle")}
           initial={member}
           onClose={() => setShowEdit(false)}
           onSubmit={async (data) => {

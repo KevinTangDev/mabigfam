@@ -269,6 +269,35 @@ is a disaster-recovery snapshot, so it includes trashed members too.
 - There is deliberately **no email field** on members, so contact quick actions are call,
   message (`sms:`), directions and vCard only; adding email is a schema + API + export change.
 
+### Internationalisation (`web/src/i18n/`)
+
+EN / FR / 中文, in-house (no i18n library). `en.ts` is the source of truth and defines
+`MessageKey`; `fr.ts`/`zh.ts` are `Record<MessageKey, string>` so a missing key fails
+typecheck. `createI18n(lang)` in `config.ts` is a pure factory (`t`, `date`, `number`,
+`errorText`) — `useI18n()` in `index.tsx` is just a context around it, and with no provider
+it defaults to English, which is why most component tests need no wrapper.
+
+- **Never hardcode UI text.** `t("key")` for text, titles, aria-labels, placeholders,
+  `confirm()` and `setError()` messages. `web/test/i18nAudit.test.ts` parses the source
+  with the TypeScript AST and fails on literals, so it will tell you.
+- **Plurals**: write `foo_one` and `foo_other` and call `t("foo", { count })`. French treats 0
+  and 1 as singular; Chinese repeats the same text in both. Both variants must exist in every
+  dictionary (the key set must match exactly).
+- **Dates/numbers** go through `date(value, opts)` / `number()` — not
+  `toLocaleDateString(undefined, …)`. Stored all-day dates are UTC midnight, so pass
+  `timeZone: "UTC"`.
+- **Lib helpers** (`countdownLabel`, `relationshipLabels`, `addedLabel`, `greeting`) take `t`
+  (or `date`) as an argument instead of importing the hook.
+- **Server messages** are English; add any new user-visible one to `serverErrors.ts` and the
+  dictionaries. Validation details pass through untranslated.
+- **French typography** (no-break space before `? ! : ;`) is applied once in `fr.ts`, so write
+  plain spaces there. `<em>…</em>` is the only markup, rendered by `rich()`.
+- Header width is the tight spot: French labels are the longest, so the top nav only appears
+  from `lg`, the brand text hides between `lg` and `xl`, and Sign out is icon-only below
+  `2xl`. Re-check `/` at 1024px in French after adding nav items.
+- Fonts: Fraunces and Plus Jakarta Sans have no Han glyphs; the stacks fall back to system
+  sans CJK fonts, and `:lang(zh) em` is un-italicised (CJK has no true italic).
+
 ### Module resolution in `server/`
 
 `tsconfig.json` uses `NodeNext`/`NodeNext` — relative imports need an

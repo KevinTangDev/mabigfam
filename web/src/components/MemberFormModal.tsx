@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useI18n } from "../i18n/context";
 import type { FamilyMember, FamilyMemberInput } from "../types";
 import { Button, inputClass } from "./ui";
 
@@ -16,6 +17,7 @@ function toDateInputValue(iso: string | null | undefined): string {
 }
 
 export default function MemberFormModal({ title, initial, onSubmit, onClose }: Props) {
+  const { t, errorText } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
   const [nameZh, setNameZh] = useState(initial?.nameZh ?? "");
   const [birthday, setBirthday] = useState(toDateInputValue(initial?.birthday));
@@ -37,7 +39,7 @@ export default function MemberFormModal({ title, initial, onSubmit, onClose }: P
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Name is required");
+      setError(t("memberForm.nameRequired"));
       return;
     }
 
@@ -53,17 +55,17 @@ export default function MemberFormModal({ title, initial, onSubmit, onClose }: P
         note: note.trim() || null,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(errorText(err, "common.somethingWrong"));
       setSaving(false);
     }
   }
 
   const fields = [
-    { label: "Name *", value: name, set: setName, autoFocus: true },
-    { label: "Chinese name", value: nameZh, set: setNameZh },
-    { label: "Birthday", value: birthday, set: setBirthday, type: "date" },
-    { label: "Phone", value: phone, set: setPhone, type: "tel" },
-    { label: "Address", value: address, set: setAddress },
+    { label: t("memberForm.name"), value: name, set: setName, autoFocus: true },
+    { label: t("memberForm.nameZh"), value: nameZh, set: setNameZh },
+    { label: t("memberForm.birthday"), value: birthday, set: setBirthday, type: "date" },
+    { label: t("memberForm.phone"), value: phone, set: setPhone, type: "tel" },
+    { label: t("memberForm.address"), value: address, set: setAddress },
   ];
 
   return (
@@ -95,7 +97,7 @@ export default function MemberFormModal({ title, initial, onSubmit, onClose }: P
           ))}
 
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-ctp-subtext0">Note</span>
+            <span className="text-xs font-medium text-ctp-subtext0">{t("memberForm.note")}</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -108,10 +110,10 @@ export default function MemberFormModal({ title, initial, onSubmit, onClose }: P
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" onClick={onClose} disabled={saving}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         </form>

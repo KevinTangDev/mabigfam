@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { api } from "../api/client";
+import { useI18n } from "../i18n/context";
 import Avatar from "./Avatar";
 import Icon from "./icons";
 import type { FamilyMember } from "../types";
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function PhotoUploader({ member, onChange }: Props) {
+  const { t, errorText } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function PhotoUploader({ member, onChange }: Props) {
     try {
       onChange(await api.uploadPhoto(member.id, file));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(errorText(err, "photo.uploadFailed"));
     } finally {
       setBusy(false);
       // Allow re-picking the same file after a failure.
@@ -35,13 +37,13 @@ export default function PhotoUploader({ member, onChange }: Props) {
     try {
       onChange(await api.deletePhoto(member.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove photo");
+      setError(errorText(err, "photo.removeFailed"));
     } finally {
       setBusy(false);
     }
   }
 
-  const label = member.photoPath ? "Replace photo" : "Add photo";
+  const label = member.photoPath ? t("photo.replace") : t("photo.add");
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -68,14 +70,14 @@ export default function PhotoUploader({ member, onChange }: Props) {
           <Icon name="camera" className="size-4" />
         </button>
       </div>
-      {busy && <p className="text-xs text-ctp-subtext0">Working...</p>}
+      {busy && <p className="text-xs text-ctp-subtext0">{t("photo.working")}</p>}
       {member.photoPath && !busy && (
         <button
           type="button"
           onClick={handleRemove}
           className="cursor-pointer text-xs font-semibold text-ctp-subtext0 transition hover:text-ctp-red"
         >
-          Remove photo
+          {t("photo.remove")}
         </button>
       )}
       {error && <p className="max-w-40 text-center text-xs text-ctp-red">{error}</p>}

@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import { I18nContext } from "../i18n/context";
 
 interface Props {
   children: ReactNode;
@@ -16,6 +17,9 @@ interface State {
  * message costs nothing and turns "it's broken" into something diagnosable.
  */
 export default class ErrorBoundary extends Component<Props, State> {
+  static contextType = I18nContext;
+  declare context: React.ContextType<typeof I18nContext>;
+
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -30,12 +34,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    const { t } = this.context;
 
     return (
       <div className="mx-auto max-w-lg rounded-xl border border-ctp-red/40 bg-ctp-mantle p-6">
-        <h2 className="text-lg font-semibold text-ctp-red">This page hit an error</h2>
+        <h2 className="text-lg font-semibold text-ctp-red">{t("error.pageTitle")}</h2>
         <p className="mt-2 text-sm text-ctp-subtext0">
-          The rest of the app still works — use the navigation above to move on.
+          {t("error.pageBody")}
         </p>
 
         <pre className="mt-4 max-h-48 overflow-auto rounded-lg bg-ctp-crust/60 p-3 text-xs whitespace-pre-wrap text-ctp-peach">
@@ -47,7 +52,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           className="mt-4 cursor-pointer rounded-lg border border-ctp-surface1 bg-ctp-surface0
                      px-3 py-1.5 text-sm font-medium text-ctp-text transition hover:bg-ctp-surface1"
         >
-          Try again
+          {t("common.tryAgain")}
         </button>
       </div>
     );

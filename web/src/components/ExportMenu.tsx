@@ -1,36 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { downloadFile } from "../api/client";
+import { useI18n } from "../i18n/context";
+import type { BaseKey } from "../i18n/config";
 import Icon from "./icons";
 import { Button, cardClass } from "./ui";
 
-const OPTIONS = [
+const OPTIONS: { label: BaseKey; hint: BaseKey; path: string; file: string }[] = [
   {
-    label: "Spreadsheet (.csv)",
-    hint: "Opens in Excel or Google Sheets",
+    label: "export.csv",
+    hint: "export.csvHint",
     path: "/export/csv",
     file: "mabigfam.csv",
   },
   {
-    label: "Contacts with photos (.vcf)",
-    hint: "Import into iPhone or Android contacts",
+    label: "export.vcard",
+    hint: "export.vcardHint",
     path: "/export/vcard",
     file: "mabigfam.vcf",
   },
   {
-    label: "Contacts without photos (.vcf)",
-    hint: "Much smaller file",
+    label: "export.vcardLite",
+    hint: "export.vcardLiteHint",
     path: "/export/vcard?photos=false",
     file: "mabigfam.vcf",
   },
   {
-    label: "Full backup (.zip)",
-    hint: "Database + all photos, for safekeeping",
+    label: "export.backup",
+    hint: "export.backupHint",
     path: "/backup",
     file: "mabigfam-backup.zip",
   },
 ];
 
 export default function ExportMenu() {
+  const { t, errorText } = useI18n();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +65,7 @@ export default function ExportMenu() {
       await downloadFile(path, file);
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      setError(errorText(err, "export.failed"));
     } finally {
       setBusy(null);
     }
@@ -72,7 +75,7 @@ export default function ExportMenu() {
     <div className="relative" ref={wrapRef}>
       <Button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
         <Icon name="download" />
-        Export
+        {t("export.button")}
         <Icon name="chevronDown" className="size-3.5" />
       </Button>
 
@@ -91,9 +94,9 @@ export default function ExportMenu() {
                          hover:bg-ctp-surface0 disabled:opacity-50"
             >
               <div className="text-sm font-medium text-ctp-text">
-                {busy === opt.path ? "Preparing..." : opt.label}
+                {busy === opt.path ? t("export.preparing") : t(opt.label)}
               </div>
-              <div className="text-xs text-ctp-subtext0">{opt.hint}</div>
+              <div className="text-xs text-ctp-subtext0">{t(opt.hint)}</div>
             </button>
           ))}
 

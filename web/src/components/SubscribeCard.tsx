@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useI18n } from "../i18n/context";
 import Icon from "./icons";
 import { Button, cardClass } from "./ui";
 
@@ -13,6 +14,7 @@ interface Props {
  * automatically.
  */
 export default function SubscribeCard({ onError }: Props) {
+  const { t, rich, errorText } = useI18n();
   const [url, setUrl] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -21,7 +23,7 @@ export default function SubscribeCard({ onError }: Props) {
     api
       .getCalendarSubscription()
       .then((s) => setUrl(`${window.location.origin}${s.path}`))
-      .catch((err) => onError(err instanceof Error ? err.message : "Could not load feed URL"));
+      .catch((err) => onError(errorText(err, "sub.loadFailed")));
     // onError is a setState function and stable; re-running on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -36,7 +38,7 @@ export default function SubscribeCard({ onError }: Props) {
       // Clipboard needs a secure context; reveal the URL so it can be
       // selected by hand instead.
       setRevealed(true);
-      onError("Couldn't copy automatically — select the URL and copy it manually.");
+      onError(t("sub.copyFailed"));
     }
   }
 
@@ -44,34 +46,31 @@ export default function SubscribeCard({ onError }: Props) {
     <div className={`${cardClass} border-ctp-blue/25 bg-linear-to-br from-ctp-blue/10 via-ctp-mantle to-ctp-mantle p-4 sm:p-5`}>
       <h3 className="flex items-center gap-2 text-sm font-semibold text-ctp-text">
         <Icon name="calendar" className="size-4 text-ctp-blue" />
-        Subscribe in Google or Apple Calendar
+        {t("sub.title")}
       </h3>
       <p className="mt-1 text-sm text-ctp-subtext0">
-        Subscribe once and every new event and birthday shows up automatically. In Google Calendar
-        use <em>Other calendars → From URL</em>; on iPhone use{" "}
-        <em>Settings → Calendar → Accounts → Add Subscribed Calendar</em>.
+        {rich("sub.body")}
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code
           className="min-w-0 flex-1 truncate rounded-xl border border-ctp-surface0 bg-ctp-crust/60
                      px-3 py-2 font-mono text-xs text-ctp-subtext1"
-          title={revealed ? undefined : "Hidden — this URL is a secret"}
+          title={revealed ? undefined : t("sub.hiddenTitle")}
         >
-          {url ? (revealed ? url : url.replace(/\/api\/calendar\/[^/]+\//, "/api/calendar/••••••/")) : "Loading..."}
+          {url ? (revealed ? url : url.replace(/\/api\/calendar\/[^/]+\//, "/api/calendar/••••••/")) : t("common.loading")}
         </code>
 
         <Button onClick={() => setRevealed((r) => !r)} disabled={!url}>
-          {revealed ? "Hide" : "Reveal"}
+          {revealed ? t("common.hide") : t("common.reveal")}
         </Button>
         <Button variant="primary" onClick={copy} disabled={!url}>
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("common.copied") : t("common.copy")}
         </Button>
       </div>
 
       <p className="mt-3 text-xs text-ctp-peach">
-        Treat this URL like a password — anyone who has it can read the family's events without
-        signing in.
+        {t("sub.warning")}
       </p>
     </div>
   );

@@ -4,6 +4,8 @@ import ReactFamilyTree from "react-family-tree";
 import calcTree from "relatives-tree";
 import type { ExtNode } from "relatives-tree/lib/types";
 import { api } from "../api/client";
+import { useI18n } from "../i18n/context";
+import type { BaseKey } from "../i18n/config";
 import { buildRelativesTreeNodes } from "../lib/buildRelativesTree";
 import { connectedComponent } from "../lib/connectedComponent";
 import { buildPartnerConnectors, type PartnerConnector } from "../lib/partnerConnectors";
@@ -38,35 +40,36 @@ function cellCenter(units: number, cell: number): number {
 
 const PARTNER_BADGE: Record<
   PartnerConnector["status"],
-  { icon: IconName; legend: string; tooltip: string; className: string }
+  { icon: IconName; legend: BaseKey; tooltip: BaseKey; className: string }
 > = {
   married: {
     icon: "heart",
-    legend: "Married",
-    tooltip: "Married",
+    legend: "status.married",
+    tooltip: "status.married",
     className: "border-ctp-pink bg-ctp-mantle text-ctp-pink",
   },
   partner: {
     icon: "users",
-    legend: "Partner",
-    tooltip: "Partner",
+    legend: "status.partner",
+    tooltip: "status.partner",
     className: "border-ctp-blue bg-ctp-mantle text-ctp-blue",
   },
   divorced: {
     icon: "heartCrack",
-    legend: "Divorced",
-    tooltip: "Divorced",
+    legend: "status.divorced",
+    tooltip: "status.divorced",
     className: "border-dashed border-ctp-red bg-ctp-mantle text-ctp-red",
   },
   inferred: {
     icon: "link",
-    legend: "Assumed",
-    tooltip: "Assumed partners — share a child, no partnership recorded",
+    legend: "status.assumed",
+    tooltip: "status.assumedTooltip",
     className: "border-dashed border-ctp-overlay0 bg-ctp-surface0 text-ctp-overlay1",
   },
 };
 
 export default function TreeView() {
+  const { t, date, errorText } = useI18n();
   const { rootId: rootIdParam } = useParams<{ rootId?: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<TreeData | null>(null);
@@ -84,7 +87,9 @@ export default function TreeView() {
           setRootId((founder ?? tree.members[0]).id);
         }
       })
-      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load the tree"));
+      .catch((err) => setLoadError(errorText(err, "tree.loadFailed")));
+    // errorText only changes with the language, which shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootIdParam]);
 
   useEffect(() => {
@@ -188,8 +193,8 @@ export default function TreeView() {
   if (data.members.length === 0) {
     return (
       <div className={cardClass}>
-        <EmptyState icon="tree" title="No family members yet">
-          Add some in the Contacts page first, then link parents and children to grow the tree.
+        <EmptyState icon="tree" title={t("tree.empty.title")}>
+          {t("tree.empty.body")}
         </EmptyState>
       </div>
     );
@@ -206,13 +211,13 @@ export default function TreeView() {
   return (
     <div>
       <PageHeader
-        title="Family tree"
-        subtitle="Tap anyone to open their profile. Drag to pan, pinch or use the buttons to zoom."
+        title={t("tree.title")}
+        subtitle={t("tree.subtitle")}
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2.5">
         <label className="flex items-center gap-2.5 text-sm font-semibold text-ctp-subtext1">
-          Viewing from
+          {t("tree.viewingFrom")}
           <select
             value={rootId}
             onChange={(e) => navigate(`/tree/${e.target.value}`)}
@@ -235,7 +240,7 @@ export default function TreeView() {
               >
                 <Icon name={badge.icon} className="size-3" />
               </span>
-              {badge.legend}
+              {t(badge.legend)}
             </span>
           ))}
         </span>
@@ -243,22 +248,17 @@ export default function TreeView() {
 
       {layout?.error && (
         <div className={`${cardClass} border-ctp-red/40 p-5`}>
-          <h3 className="font-semibold text-ctp-red">This family can't be laid out</h3>
+          <h3 className="font-semibold text-ctp-red">{t("tree.err.title")}</h3>
+          <p className="mt-2 text-sm text-ctp-subtext0">{t("tree.err.p1")}</p>
           <p className="mt-2 text-sm text-ctp-subtext0">
-            The tree layout library couldn't arrange these relationships. Picking a different
-            person above usually works. It's often caused by a relationship that's only recorded
-            on one side — check that children have both parents linked.
-          </p>
-          <p className="mt-2 text-sm text-ctp-subtext0">
-            If this keeps happening for a family that looks fine (e.g. a simple parents-and-kids
-            group), it may be stale code left over from a page that's been open a long time —{" "}
+            {t("tree.err.p2a")}{" "}
             <button
               onClick={() => window.location.reload()}
               className="cursor-pointer font-medium text-brand underline underline-offset-2"
             >
-              reload the page
+              {t("tree.err.reload")}
             </button>{" "}
-            and try again before assuming the data is at fault.
+            {t("tree.err.p2b")}
           </p>
           <pre className="mt-3 overflow-auto rounded-lg bg-ctp-crust/60 p-3 text-xs text-ctp-peach">
             {layout.error}
@@ -266,7 +266,7 @@ export default function TreeView() {
           {layout.detail && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-ctp-overlay1">
-                Technical details
+                {t("tree.err.details")}
               </summary>
               <pre className="mt-2 overflow-auto rounded-lg bg-ctp-crust/60 p-3 text-xs text-ctp-overlay1">
                 {layout.detail}
@@ -279,13 +279,9 @@ export default function TreeView() {
       {missing.length > 0 && (
         <div className={`${cardClass} mb-4 border-ctp-yellow/40 p-4`}>
           <h3 className="text-sm font-semibold text-ctp-yellow">
-            {missing.length} {missing.length === 1 ? "person isn't" : "people aren't"} shown here
+            {t("tree.missing.title", { count: missing.length })}
           </h3>
-          <p className="mt-1 text-sm text-ctp-subtext0">
-            The layout couldn't place everyone in this family. This usually means a relationship
-            recorded on only one side — a child with just one parent linked, whose parent has a
-            partner, can fall through. Linking the second parent usually fixes it.
-          </p>
+          <p className="mt-1 text-sm text-ctp-subtext0">{t("tree.missing.body")}</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {missing.map((m) => (
               <li key={m.id}>
@@ -294,7 +290,7 @@ export default function TreeView() {
                   className="cursor-pointer rounded-full border border-ctp-surface1 bg-ctp-surface0
                              px-2.5 py-1 text-xs font-medium text-ctp-text transition
                              hover:border-brand"
-                  title={`View the tree from ${m.name}`}
+                  title={t("tree.viewFrom", { name: m.name })}
                 >
                   {m.name}
                 </button>
@@ -326,7 +322,7 @@ export default function TreeView() {
                   style={{ top: top * (CELL_HEIGHT / 2) + 6, height: CELL_HEIGHT - 12 }}
                 >
                   <span className="absolute top-1.5 left-3 text-[10px] font-bold tracking-wider text-ctp-overlay1 uppercase">
-                    Generation {i + 1}
+                    {t("tree.generation", { n: i + 1 })}
                   </span>
                 </div>
               ))}
@@ -369,13 +365,17 @@ export default function TreeView() {
             <div className="pointer-events-none absolute inset-0">
               {partnerConnectors.map((connector) => {
                 const badge = PARTNER_BADGE[connector.status];
-                const a = memberById.get(connector.aId)?.name ?? "Unknown";
-                const b = memberById.get(connector.bId)?.name ?? "Unknown";
-                const since = connector.since ? ` since ${connector.since.slice(0, 10)}` : "";
+                const a = memberById.get(connector.aId)?.name ?? t("common.unknown");
+                const b = memberById.get(connector.bId)?.name ?? t("common.unknown");
+                const since = connector.since
+                  ? t("status.since", {
+                      date: date(connector.since, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }),
+                    })
+                  : "";
                 const title =
                   connector.status === "inferred"
-                    ? `${a} & ${b} — ${badge.tooltip}`
-                    : `${a} & ${b} — ${badge.tooltip}${since}`;
+                    ? `${a} & ${b} — ${t(badge.tooltip)}`
+                    : `${a} & ${b} — ${t(badge.tooltip)}${since}`;
                 return (
                   <span
                     key={`${connector.aId}-${connector.bId}`}
@@ -401,9 +401,9 @@ export default function TreeView() {
 
       <p className="mt-3 text-center text-xs text-ctp-overlay1">
         <Link to="/contacts" className="font-semibold text-brand">
-          Manage relationships
+          {t("tree.manage.link")}
         </Link>{" "}
-        from a person's profile — add parents, children and partners there.
+        {t("tree.manage.rest")}
       </p>
     </div>
   );

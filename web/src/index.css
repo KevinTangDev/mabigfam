@@ -138,8 +138,12 @@
   --shadow-pop: var(--sh-pop);
 
   --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, "Segoe UI", -apple-system,
-    "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-display: "Fraunces Variable", ui-serif, Georgia, "Songti SC", "SimSun", serif;
+    "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  /* Fraunces draws Latin only. The fallbacks are chosen so Han characters in a
+     heading (Chinese UI text, a member's Chinese name) land on a clean sans CJK
+     face rather than a heavy serif like SimSun. */
+  --font-display: "Fraunces Variable", Georgia, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
 }
 
 /* Drive `dark:` off the attribute rather than the OS setting, so the
@@ -156,6 +160,13 @@
       transparent 70%
     );
     background-repeat: no-repeat;
+  }
+
+  /* CJK has no true italic — browsers fake a slant that looks wrong, so emphasis
+     in Chinese is bold instead. */
+  :lang(zh) em {
+    font-style: normal;
+    font-weight: 600;
   }
 
   h1,

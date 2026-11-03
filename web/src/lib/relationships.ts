@@ -1,3 +1,4 @@
+import type { BaseKey, TFn } from "../i18n/config";
 import type { FamilyMember, ParentChildLink, Partnership, PartnershipStatus } from "../types";
 
 export interface Relations {
@@ -52,19 +53,19 @@ export function buildRelationIndex(data: {
 
 const first = (m: FamilyMember) => m.name.split(" ")[0]!;
 
-const PARTNER_PHRASE: Record<PartnershipStatus, string> = {
-  married: "Married to",
-  partner: "Partner of",
-  divorced: "Formerly married to",
+const PARTNER_PHRASE: Record<PartnershipStatus, BaseKey> = {
+  married: "rel.marriedTo",
+  partner: "rel.partnerOf",
+  divorced: "rel.formerlyMarriedTo",
 };
 
 /** Short, human phrases for a card: "Child of Hung & Mou", "Married to Anna", "2 children". */
-export function relationshipLabels(rel: Relations): string[] {
+export function relationshipLabels(rel: Relations, t: TFn): string[] {
   const labels: string[] = [];
-  if (rel.parents.length > 0) labels.push(`Child of ${rel.parents.map(first).join(" & ")}`);
-  for (const p of rel.partners) labels.push(`${PARTNER_PHRASE[p.status]} ${first(p.member)}`);
-  if (rel.children.length > 0) {
-    labels.push(rel.children.length === 1 ? "1 child" : `${rel.children.length} children`);
+  if (rel.parents.length > 0) {
+    labels.push(t("rel.childOf", { names: rel.parents.map(first).join(t("rel.and")) }));
   }
+  for (const p of rel.partners) labels.push(t(PARTNER_PHRASE[p.status], { name: first(p.member) }));
+  if (rel.children.length > 0) labels.push(t("rel.children", { count: rel.children.length }));
   return labels;
 }
