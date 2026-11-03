@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { downloadFile } from "../api/client";
+import Icon from "./icons";
 import { Button, cardClass } from "./ui";
 
 const OPTIONS = [
@@ -70,13 +71,15 @@ export default function ExportMenu() {
   return (
     <div className="relative" ref={wrapRef}>
       <Button onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
-        Export ▾
+        <Icon name="download" />
+        Export
+        <Icon name="chevronDown" className="size-3.5" />
       </Button>
 
       {open && (
         <div
           role="menu"
-          className={`${cardClass} absolute right-0 z-20 mt-1 w-72 overflow-hidden p-1 shadow-lg`}
+          className={`${cardClass} absolute right-0 z-20 mt-1 w-72 max-w-[calc(100vw-2rem)] overflow-hidden p-1 shadow-lg`}
         >
           {OPTIONS.map((opt) => (
             <button

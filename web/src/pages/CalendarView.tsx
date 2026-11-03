@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, downloadFile } from "../api/client";
 import EventFormModal from "../components/EventFormModal";
 import SubscribeCard from "../components/SubscribeCard";
+import Icon from "../components/icons";
 import { Button, cardClass } from "../components/ui";
 import { googleCalendarUrl, nextBirthday, turningAge } from "../lib/calendarLinks";
 import type { FamilyEvent, FamilyMember } from "../types";
@@ -61,7 +62,10 @@ function EventCard({
         <h3 className="font-semibold text-ctp-text">{event.title}</h3>
         <p className="mt-0.5 text-sm text-ctp-blue">{formatWhen(event)}</p>
         {event.location && (
-          <p className="mt-1 text-sm text-ctp-subtext1">📍 {event.location}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-ctp-subtext1">
+            <Icon name="pin" className="size-3.5 text-ctp-overlay1" />
+            {event.location}
+          </p>
         )}
         {event.description && (
           <p className="mt-1 whitespace-pre-wrap text-sm text-ctp-subtext0">
@@ -96,7 +100,7 @@ function EventCard({
         <Button
           variant="danger"
           onClick={onDelete}
-          className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+          className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
         >
           Delete
         </Button>
@@ -163,7 +167,8 @@ export default function CalendarView() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-semibold text-ctp-text">Family calendar</h2>
         <Button variant="primary" onClick={() => setShowCreate(true)} className="ml-auto">
-          + Add event
+          <Icon name="plus" />
+          Add event
         </Button>
       </div>
 
@@ -206,7 +211,7 @@ export default function CalendarView() {
               <ul className={`${cardClass} divide-y divide-ctp-surface0`}>
                 {birthdays.map(({ member, occurrence, age }) => (
                   <li key={member.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <span aria-hidden="true">🎂</span>
+                    <Icon name="cake" className="size-4 text-ctp-pink" />
                     <span className="font-medium text-ctp-text">{member.name}</span>
                     {member.nameZh && (
                       <span className="text-ctp-subtext0">{member.nameZh}</span>

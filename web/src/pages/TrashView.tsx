@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import Avatar from "../components/Avatar";
 import { Button, cardClass } from "../components/ui";
+import Icon from "../components/icons";
 import type { FamilyMember } from "../types";
 
 function formatDeletedAt(iso: string | null): string {
@@ -74,8 +75,9 @@ export default function TrashView() {
   return (
     <div>
       <div className="mb-4 flex items-center gap-3">
-        <Link to="/" className="text-sm text-ctp-subtext0 hover:text-ctp-text">
-          ← Back to family
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-ctp-subtext0 hover:text-ctp-text">
+          <Icon name="arrowLeft" />
+          Back to family
         </Link>
       </div>
 

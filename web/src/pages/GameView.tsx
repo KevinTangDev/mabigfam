@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, photoUrl } from "../api/client";
 import { Button, cardClass } from "../components/ui";
+import Icon from "../components/icons";
 import type { FamilyMember } from "../types";
 
 /** Minimum photographed members needed for a question to have wrong answers. */
@@ -74,9 +75,7 @@ export default function GameView() {
   if (photographed.length < MIN_PLAYABLE) {
     return (
       <div className={`${cardClass} p-8 text-center`}>
-        <p className="text-3xl" aria-hidden="true">
-          📸
-        </p>
+        <Icon name="camera" className="mx-auto size-10 text-ctp-overlay1" />
         <h2 className="mt-3 text-lg font-semibold text-ctp-text">Not enough photos yet</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-ctp-subtext0">
           The guessing game needs at least {MIN_PLAYABLE} family members with photos — there
@@ -119,7 +118,16 @@ export default function GameView() {
           {score.right}/{score.asked}
         </span>
         <span className="text-ctp-peach">
-          {streak > 0 ? `🔥 ${streak}` : best > 0 ? `best ${best}` : ""}
+          {streak > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <Icon name="flame" className="size-4" />
+              {streak}
+            </span>
+          ) : best > 0 ? (
+            `best ${best}`
+          ) : (
+            ""
+          )}
         </span>
       </div>
 
@@ -156,8 +164,10 @@ export default function GameView() {
               >
                 {option.name}
                 {option.nameZh && <span className="ml-2 opacity-70">{option.nameZh}</span>}
-                {answered && isAnswer && <span className="float-right">✓</span>}
-                {answered && isPicked && !isAnswer && <span className="float-right">✗</span>}
+                {answered && isAnswer && <Icon name="check" label="Correct answer" className="float-right size-4" />}
+                {answered && isPicked && !isAnswer && (
+                  <Icon name="x" label="Your guess" className="float-right size-4" />
+                )}
               </button>
             );
           })}

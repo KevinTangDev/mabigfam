@@ -103,7 +103,7 @@ describe("GameView", () => {
 
     // Exactly one button is revealed as the correct answer, and every
     // button is now disabled regardless of which one was picked.
-    const marked = buttons.filter((b) => b.textContent?.includes("✓"));
+    const marked = buttons.filter((b) => b.querySelector("svg[aria-label='Correct answer']"));
     expect(marked.length).toBe(1);
     expect(buttons.every((b) => b.disabled)).toBe(true);
     expect(container.textContent).toMatch(/[01]\/1/);

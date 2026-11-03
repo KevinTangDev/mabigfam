@@ -10,6 +10,15 @@ import { useAuth } from "./auth/AuthContext";
 import { useTheme } from "./theme/ThemeProvider";
 import { Button } from "./components/ui";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Icon from "./components/icons";
+import type { IconName } from "./components/icons";
+
+const NAV: { to: string; label: string; icon: IconName; end: boolean }[] = [
+  { to: "/", label: "Family", icon: "users", end: true },
+  { to: "/tree", label: "Tree", icon: "tree", end: false },
+  { to: "/calendar", label: "Calendar", icon: "calendar", end: false },
+  { to: "/game", label: "Game", icon: "game", end: false },
+];
 
 function ThemeToggle() {
   const { flavor, toggle } = useTheme();
@@ -20,7 +29,7 @@ function ThemeToggle() {
       title={flavor === "dark" ? "Switch to Latte (light)" : "Switch to Mocha (dark)"}
       aria-label="Toggle colour theme"
     >
-      {flavor === "dark" ? "☀" : "☾"}
+      <Icon name={flavor === "dark" ? "sun" : "moon"} className="size-5" />
     </Button>
   );
 }
@@ -39,28 +48,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ctp-surface0 bg-ctp-mantle">
-        <div className="mx-auto flex max-w-5xl items-center gap-6 px-6 py-3">
+      <header className="sticky top-0 z-30 border-b border-ctp-surface0 bg-ctp-mantle/85 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-2 sm:px-6">
           <h1 className="text-lg font-semibold tracking-tight text-ctp-mauve">MaBigFam</h1>
 
-          <nav className="flex gap-1">
-            {[
-              { to: "/", label: "Table", end: true },
-              { to: "/tree", label: "Tree", end: false },
-              { to: "/calendar", label: "Calendar", end: false },
-              { to: "/game", label: "Game", end: false },
-            ].map((item) => (
+          {/* Top tabs from sm up; below that the bottom bar takes over. */}
+          <nav aria-label="Main" className="hidden gap-1 sm:flex">
+            {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition " +
+                  "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition " +
                   (isActive
                     ? "bg-ctp-blue/15 text-ctp-blue"
                     : "text-ctp-subtext0 hover:bg-ctp-surface0 hover:text-ctp-text")
                 }
               >
+                <Icon name={item.icon} />
                 {item.label}
               </NavLink>
             ))}
@@ -68,14 +74,16 @@ export default function App() {
 
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
-            <Button variant="ghost" onClick={logout}>
-              Sign out
+            <Button variant="ghost" onClick={logout} aria-label="Sign out" title="Sign out">
+              <Icon name="logout" className="size-5" />
+              <span className="hidden sm:inline">Sign out</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-6">
+      {/* pb-24 keeps the last row clear of the fixed bottom bar on phones. */}
+      <main className="mx-auto max-w-5xl px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-6">
         {/* Keyed on the route so navigating away clears a previous crash. */}
         <ErrorBoundary key={location.pathname}>
           <Routes>
@@ -89,6 +97,30 @@ export default function App() {
           </Routes>
         </ErrorBoundary>
       </main>
+
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-ctp-surface0 bg-ctp-mantle/95
+                   pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
+      >
+        <ul className="mx-auto grid max-w-md grid-cols-4">
+          {NAV.map((item) => (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium transition " +
+                  (isActive ? "text-ctp-blue" : "text-ctp-subtext0 hover:text-ctp-text")
+                }
+              >
+                <Icon name={item.icon} className="size-5" />
+                {item.label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }
