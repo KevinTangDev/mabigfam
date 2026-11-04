@@ -31,6 +31,17 @@ function required(name: string, minLength: number): string {
   return value;
 }
 
+/**
+ * TRUST_PROXY: unset/"false" (default), "true", or an address / CIDR list such
+ * as "172.16.0.0/12" (trust only a proxy at those addresses). See
+ * config.trustProxy below.
+ */
+function parseTrustProxy(raw: string | undefined): boolean | string {
+  if (!raw || raw === "false") return false;
+  if (raw === "true") return true;
+  return raw;
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 3001),
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
@@ -117,7 +128,9 @@ export const config = {
    * subscriptions) without signing everyone out.
    */
   calendarFeedToken:
-    process.env.CALENDAR_FEED_TOKEN ??
+    // || not ??: docker compose passes an unset optional variable as "", which
+    // must mean "derive it", not "the token is the empty string".
+    process.env.CALENDAR_FEED_TOKEN ||
     crypto.createHmac("sha256", required("SESSION_SECRET", 32)).update("calendar-feed").digest("hex").slice(0, 32),
 
   /**
@@ -134,4 +147,19 @@ export const config = {
     max: Number(process.env.LOGIN_RATE_LIMIT_MAX ?? 5),
     timeWindow: process.env.LOGIN_RATE_LIMIT_WINDOW ?? "1 minute",
   },
+
+  /**
+   * Whether to believe the X-Forwarded-For header when working out the
+   * client's IP. Off by default, and it must stay off unless a reverse proxy
+   * or tunnel sits in front: otherwise anyone can forge the header to dodge the
+   * login rate limit.
+   *
+   * It must be ON behind a proxy (Cloudflare Tunnel, Caddy, ...): without it
+   * every request appears to come from the proxy's own address, so the login
+   * limit becomes one shared bucket for the whole family — one person
+   * mistyping the password locks everyone out, and a stranger can do it on
+   * purpose. Only safe when the app is reachable *only* through that proxy
+   * (the docker compose setup publishes no port for exactly this reason).
+   */
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 };

@@ -25,7 +25,7 @@ import { backupRoutes } from "./routes/backup.js";
  * `app.inject()` over the real routing and hook pipeline.
  */
 export async function buildApp({ logger = true } = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger });
+  const app = Fastify({ logger, trustProxy: config.trustProxy });
 
   await app.register(cors, {
     origin: config.webOrigin,

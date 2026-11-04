@@ -1,0 +1,70 @@
+# mabigfam on Docker Compose. Full walkthrough: docs/deploy-docker.md
+#
+#   cp deploy/docker.env.example .env      # then fill it in
+#   docker compose up -d --build
+#
+# Three services:
+#   migrate      one-shot: applies database migrations, then exits
+#   app          the Node server (API + built frontend); waits for migrate
+#   cloudflared  optional tunnel that gives the app public HTTPS (profile "tunnel")
+#
+# All state is the single `mabigfam-data` volume (SQLite file + photos).
+
+name: mabigfam
+
+services:
+  migrate:
+    build:
+      context: .
+      target: build # carries the Prisma CLI, which the runtime image does not
+    image: mabigfam-build
+    # Must be the same user as `app`, or the database file would be created
+    # owned by root and the app couldn't write to it.
+    user: node
+    command: ["sh", "deploy/docker-migrate.sh"]
+    volumes:
+      - mabigfam-data:/data
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runtime
+    image: mabigfam:latest
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    init: true
+    restart: unless-stopped
+    environment:
+      # Required — compose refuses to start without them, and so does the app.
+      FAMILY_PASSWORD: ${FAMILY_PASSWORD:?Set FAMILY_PASSWORD in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env (32+ characters)}
+      # Optional. Empty means "use the default" for each of these.
+      CALENDAR_FEED_TOKEN: ${CALENDAR_FEED_TOKEN:-}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3001}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      # Only the tunnel can reach this container (no published port below), so
+      # trusting its X-Forwarded-For is safe and makes the login rate limit
+      # work per visitor. Set to false if you publish the port directly.
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+    volumes:
+      - mabigfam-data:/data
+    # Not published on purpose: reach it through the tunnel. To test locally
+    # or serve your LAN directly, uncomment (and set TRUST_PROXY=false):
+    # ports:
+    #   - "3001:3001"
+
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mabigfam-data:
