@@ -1,0 +1,18 @@
+# Keep the build context small and — more importantly — keep local state and
+# secrets out of the image.
+.git
+.github
+.claude
+docs
+
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/*.log
+
+# Local database, uploaded photos and secrets must never be baked in.
+prisma/*.db
+prisma/*.db-journal
+server/uploads
+.env
+**/.env

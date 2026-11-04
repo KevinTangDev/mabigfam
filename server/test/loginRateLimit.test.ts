@@ -12,7 +12,8 @@ import type { FastifyInstance } from "fastify";
  * module registry is required to see a different value).
  */
 
-async function buildLimitedApp(): Promise<FastifyInstance> {
+async function buildLimitedApp(trustProxy = ""): Promise<FastifyInstance> {
+  vi.stubEnv("TRUST_PROXY", trustProxy);
   vi.stubEnv("LOGIN_RATE_LIMIT_MAX", "3");
   vi.stubEnv("LOGIN_RATE_LIMIT_WINDOW", "1 minute");
   vi.resetModules();
@@ -72,6 +73,44 @@ describe("login rate limiting", () => {
 
     const health = await app.inject({ method: "GET", url: "/api/health" });
     expect(health.statusCode).toBe(200);
+
+    await app.close();
+  });
+});
+
+/**
+ * Behind a tunnel or reverse proxy every request arrives from the proxy's own
+ * address, so without TRUST_PROXY the login limit is one bucket shared by the
+ * whole family (one typo locks everybody out). With it, the limit follows the
+ * real client in X-Forwarded-For. Without it the header must be ignored, or
+ * anyone could forge a fresh IP to skip the limit.
+ */
+describe("login rate limiting behind a proxy", () => {
+  const from = (app: FastifyInstance, ip: string, password = "wrong-password") =>
+    app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      headers: { "x-forwarded-for": ip },
+      payload: { password },
+    });
+
+  it("ignores X-Forwarded-For by default, so a forged address gets no fresh budget", async () => {
+    const app = await buildLimitedApp();
+
+    for (let i = 0; i < 3; i++) await from(app, "203.0.113.1");
+    expect((await from(app, "203.0.113.1")).statusCode).toBe(429);
+    expect((await from(app, "198.51.100.7")).statusCode).toBe(429);
+
+    await app.close();
+  });
+
+  it("with TRUST_PROXY=true, each forwarded client has its own budget", async () => {
+    const app = await buildLimitedApp("true");
+
+    for (let i = 0; i < 3; i++) await from(app, "203.0.113.1");
+    expect((await from(app, "203.0.113.1")).statusCode).toBe(429); // the typist is capped...
+    const other = await from(app, "198.51.100.7", "test-password");
+    expect(other.statusCode).toBe(200); // ...but a relative elsewhere can still sign in
 
     await app.close();
   });

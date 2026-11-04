@@ -298,6 +298,26 @@ it defaults to English, which is why most component tests need no wrapper.
 - Fonts: Fraunces and Plus Jakarta Sans have no Han glyphs; the stacks fall back to system
   sans CJK fonts, and `:lang(zh) em` is un-italicised (CJK has no true italic).
 
+### Docker deployment (`Dockerfile`, `compose.yaml`, `docs/deploy-docker.md`)
+
+- Stages: `build` (full install + build; also what the one-shot `migrate` service runs,
+  because it has the Prisma CLI), `prod` (build pruned of devDependencies), `runtime`.
+  Don't prune inside `build` — migrate would lose the CLI.
+- **Migrations go through `deploy/docker-migrate.sh`**, never a bare `prisma migrate deploy`:
+  the schema hardcodes its SQLite URL and the CLI ignores `DATABASE_URL`, so a bare run would
+  migrate a database inside the image instead of the `/data` volume. The script migrates a
+  copy of the schema with the URL rewritten (same trick as `server/test/globalSetup.ts`).
+- `migrate` and `app` both run as the `node` user; if migrate ran as root it would create the
+  DB file root-owned and the app couldn't write to it.
+- `TRUST_PROXY` (`config.trustProxy` → `Fastify({ trustProxy })`) must be on behind a tunnel or
+  proxy, else every visitor shares the login rate limit's one bucket (a typo locks the family
+  out; a stranger can do it deliberately). It must be off if the port is reachable directly,
+  or `X-Forwarded-For` can be forged. Compose publishes no port so the tunnel is the only way in.
+- Compose passes unset optional variables as `""`, so optional config must treat empty as unset
+  (`||`, not `??`) — see `CALENDAR_FEED_TOKEN` in `config.ts`.
+- `npm install`/`ci` doesn't run `prisma generate`; the Dockerfile, `deploy/update.sh` and both
+  deploy docs do it explicitly.
+
 ### Module resolution in `server/`
 
 `tsconfig.json` uses `NodeNext`/`NodeNext` — relative imports need an

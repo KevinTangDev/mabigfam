@@ -207,14 +207,24 @@ npm run build
 
 ## Deployment
 
+Two supported ways to run it on a home server:
+
+- **Docker Compose + Cloudflare Tunnel** — public HTTPS with no open ports, so
+  relatives can use it from anywhere and Google Calendar can subscribe. See
+  [`docs/deploy-docker.md`](docs/deploy-docker.md).
+- **LXC + systemd, LAN only** — see [`docs/deploy-proxmox.md`](docs/deploy-proxmox.md).
+
+The rest of this section covers what both have in common.
+
 `npm run build` produces `server/dist` and `web/dist`. Once `web/dist`
 exists, the server serves it itself — one Node process, one port, no
 separate static file server or reverse proxy required. That's deliberate:
 it's what makes a single small VM or container a complete deployment.
 
 ```bash
-npm install                 # applies patches/, generates the Prisma client
+npm install                 # applies patches/
 npx prisma migrate deploy --schema=prisma/schema.prisma
+npx prisma generate --schema=prisma/schema.prisma   # npm install does not generate the client
 npm run build
 cp server/.env.example server/.env   # then edit it — see below
 node server/dist/index.js

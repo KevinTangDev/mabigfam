@@ -1,5 +1,9 @@
 # Deploying to a Proxmox LXC container (home LAN)
 
+> Want it reachable from outside your home (relatives, Google Calendar
+> subscriptions)? Use [deploy-docker.md](deploy-docker.md) instead: Docker
+> Compose plus a Cloudflare Tunnel, with no open ports.
+
 This walks through running mabigfam on your mini PC as a Debian LXC
 container, reachable from your home network at `http://<container-ip>:3001`.
 No domain, no port forwarding, no TLS certificate — none of that is needed
@@ -66,10 +70,11 @@ Now inside the container, as root:
 apt update && apt upgrade -y
 apt install -y curl git ca-certificates
 
-# Node.js 20 LTS — the app needs 20.12+ (uses process.loadEnvFile()).
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# Node.js 24 LTS, which is what CI tests against. (The app's floor is 20.12,
+# for process.loadEnvFile(), but Node 20 is end-of-life.)
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs
-node --version   # confirm v20.x or later
+node --version   # confirm v24.x
 
 # A dedicated, unprivileged user to run the app as — never run it as root.
 useradd --system --create-home --home-dir /opt/mabigfam --shell /usr/sbin/nologin mabigfam
@@ -128,6 +133,7 @@ Still as the `mabigfam` user:
 ```bash
 cd /opt/mabigfam
 npx prisma migrate deploy --schema=prisma/schema.prisma
+npx prisma generate --schema=prisma/schema.prisma   # npm install doesn't do this for us
 npm run build
 ```
 

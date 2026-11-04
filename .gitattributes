@@ -9,3 +9,7 @@
 # cross-platform reason, not because a real failure was observed.
 *.yml text eol=lf
 *.yaml text eol=lf
+
+# Dockerfile and compose files are built on Linux hosts.
+Dockerfile text eol=lf
+.dockerignore text eol=lf

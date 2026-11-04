@@ -25,6 +25,11 @@ npm install
 echo "==> Applying any new database migrations"
 npx prisma migrate deploy --schema=prisma/schema.prisma
 
+# Neither npm install nor migrate deploy regenerates the Prisma client, so a
+# schema change would leave the build compiling against the old types.
+echo "==> Regenerating the Prisma client"
+npx prisma generate --schema=prisma/schema.prisma
+
 echo "==> Building server and web"
 npm run build
 
